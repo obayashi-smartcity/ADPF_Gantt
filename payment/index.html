@@ -308,6 +308,54 @@ body.v-list .tl-only{display:none}
 /* NA（対象外）はクリア扱い：グレーで塗る */
 .steps i.on.na{background:var(--lv2);border-color:var(--lv2)}
 .pipe .st.na b::before{background:var(--lv2);border-color:var(--lv2)}
+/* ===== 進捗列・コメント ===== */
+:root{--left:680px;--pcw:168px;--acw:104px}
+@media (max-width:1100px){ :root{--left:520px} }
+@media (max-width:640px){ :root{--left:190px} }
+.corner{gap:8px;padding:0 14px 6px 16px;align-items:flex-end}
+.corner .cn{flex:1;min-width:0}
+.corner .ach{flex:0 0 var(--acw);text-align:right}
+.pc{flex:0 0 var(--pcw);display:grid;grid-template-columns:repeat(4,1fr);align-items:center;justify-items:center;align-self:stretch;border-left:1px solid var(--hair);border-right:1px solid var(--hair)}
+.pc.ph{align-self:auto;border:0;font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--ink2);text-transform:none}
+.ac{flex:0 0 var(--acw);display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.ps{display:flex;align-items:center;justify-content:center;width:100%;height:100%;cursor:help}
+.ps i{width:11px;height:11px;border:1.5px solid var(--ink2);display:block}
+.ps.on i{background:var(--ink);border-color:var(--ink)}
+.ps.na i{background:var(--lv3);border-color:var(--lv2)}
+.row.l1 .pc{border-color:transparent}
+.cm{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;height:18px;padding:0 3px;color:var(--key);cursor:pointer;font-size:10px;font-weight:800;font-feature-settings:"tnum"}
+.cm:hover{background:var(--keybg)}
+.cmbox{border-left-color:var(--key);background:var(--keybg)}
+.cmbox .th{color:var(--key)}
+.lg-prog .sq{display:inline-block;width:10px;height:10px;border:1.5px solid var(--ink2);margin-right:5px;vertical-align:-1px}
+.lg-prog .sq.on{background:var(--ink);border-color:var(--ink)}
+.lg-prog .sq.na{background:var(--lv3);border-color:var(--lv2)}
+.lg-prog .cmi{display:inline-block;width:12px;height:10px;background:var(--key);margin-right:5px;vertical-align:-1px;clip-path:polygon(0 0,100% 0,100% 70%,45% 70%,20% 100%,20% 70%,0 70%)}
+/* Alerts 一覧：進捗列・コメント列 */
+.ar,.ahd{grid-template-columns:70px minmax(0,1fr) 96px 92px 120px var(--pcw) 30px}
+.ar .pc{height:28px;border:0}
+.ahd .pc.ph{justify-items:center}
+.cmc{display:flex;justify-content:center}
+@media (max-width:640px){
+  .cl .pc,.corner .pc,.corner .ach{display:none}
+  .ac{flex-basis:auto}
+  .ar,.ahd{grid-template-columns:54px minmax(0,1fr) 72px}
+  .ar .pc,.ahd .pc,.cmc,.ahd span:last-child{display:none}
+  .lg-prog{display:none}
+}
+/* 進捗・アラート列を狭く */
+:root{--pcw:120px;--acw:82px}
+.pc.ph{letter-spacing:0;font-size:9px}
+.ac{gap:3px}
+.ac .ab{padding:3px 4px;letter-spacing:.02em}
+.corner .ach{letter-spacing:.12em}
+/* アラートは赤の「!」に統一 */
+:root{--acw:48px}
+.alm{flex:0 0 auto;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--paper);font-size:11px;font-weight:900;line-height:1;cursor:help;font-style:normal}
+.alm:hover{opacity:.82}
+.lg-prog .alm{margin-right:5px;width:13px;height:13px;font-size:9px;vertical-align:-2px}
+.tip .al{color:var(--accent);font-weight:700}
+.corner .ach{letter-spacing:.06em;font-size:8.5px}
 </style>
 </head>
 <body>
@@ -351,6 +399,14 @@ body.v-list .tl-only{display:none}
       <span><i class="lg-mk dia" style="background:var(--ink);border-color:var(--ink)"></i>支払日</span>
       <span><i style="background:var(--accent);height:2px"></i>アラート</span>
     </div>
+    <div class="legend lg-prog" title="進捗列（検収・検収書・請求書・支払）の見方">
+      <span>進捗</span>
+      <span><b class="sq on"></b>済（日付あり）</span>
+      <span><b class="sq na"></b>NA（対象外）</span>
+      <span><b class="sq"></b>未</span>
+      <span><b class="cmi"></b>コメントあり</span>
+      <span><b class="alm">!</b>アラート（マウスで内容）</span>
+    </div>
     <input type="search" class="search" id="q" placeholder="Search">
     <div class="filters" id="filters">
       <div class="fld"><span class="fl">Alert</span><div class="ms" data-k="alert"></div></div>
@@ -377,6 +433,7 @@ body.v-list .tl-only{display:none}
 </div>
 
 <div class="ov dov" id="detailOv"><div class="dt" id="detail"></div></div>
+<div class="tip" id="tip"></div>
 
 <script>
 /* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のままでも動作 */
@@ -391,7 +448,7 @@ const END_SOON = 14;    // 工期終了まで14日以内（未検収） → 工�
 /* フィールド名 → スプレッドシートのヘッダー名（改行・空白は無視して照合。列名が変わったらここだけ直す） */
 const FIELDS = { hide:'非表示', no:'No', project:'案件', name:'契約', vendor:'契約先', status:'Status',
   s0:'当初開始日', e0:'当初終了日', p0:'当初支払予定日', s1:'変更後開始日', e1:'変更後終了日', p1:'変更後支払予定日',
-  insp:'検収日', doc:'検収書作成日', inv:'請求書受領日', paid:'支払処理日', amount:'金額（税抜）', note:'備考' };
+  insp:'検収日', doc:'検収書作成日', inv:'請求書受領日', paid:'支払処理日', amount:'金額（税抜）', note:'備考', comment:'Comment' };
 const REQUIRED = ['no', 'name', 'e0', 'p0', 'paid'];
 const DATE_KEYS = ['s0','e0','p0','s1','e1','p1','insp','doc','inv','paid'];
 /* アラート種別（rank が小さいほど優先） */
@@ -521,7 +578,7 @@ function matched() {
       const ls = c.alerts.length ? c.alerts.map((a) => AL[a.k].lbl) : [NONE];
       if (!ls.some((l) => f.alert.includes(l))) return false;
     }
-    if (q && ![c.no, c.name, c.vendor, c.project, c.note].join(' ').toLowerCase().includes(q)) return false;
+    if (q && ![c.no, c.name, c.vendor, c.project, c.note, c.comment].join(' ').toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -548,7 +605,12 @@ const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
 const man = (n) => n >= 1e8 ? (n / 1e8).toFixed(2) + '億' : Math.round(n / 1e4).toLocaleString('ja-JP') + '万';
 const dayTxt = (a) => a.k === 'payOver' || a.k === 'termEnd' ? a.d + '日超過' : a.d === 0 ? '本日' : 'あと' + a.d + '日';
 const badge = (a, long) => `<span class="ab ${AL[a.k].cls}" title="${esc(AL[a.k].ds)}">${AL[a.k].lbl}${long ? ' ' + dayTxt(a) : ''}</span>`;
-const stepsHtml = (c) => `<span class="steps" title="${STEPS.map(([k, l]) => l + (c.na[k] ? 'NA' : c.ok[k] ? '済' : '未')).join(' → ')}">${STEPS.map(([k]) => `<i${c.ok[k] ? ` class="on${c.na[k] ? ' na' : ''}"` : ''}></i>`).join('')}</span>`;
+/* 進捗（検収→検収書→請求書→支払）：■済（日付あり） ■グレー＝NA（対象外） □未 */
+const stepTxt = (c, k) => c['_' + k] != null ? fmt(c['_' + k]) + ' 済' : c.na[k] ? 'NA（対象外）' : '未';
+const progHtml = (c) => `<div class="pc">${STEPS.map(([k, l]) => `<span class="ps${c.ok[k] ? (c.na[k] ? ' na' : ' on') : ''}" title="${l}：${stepTxt(c, k)}"><i></i></span>`).join('')}</div>`;
+const progHead = () => `<div class="pc ph">${STEPS.map(([, l]) => `<span>${l}</span>`).join('')}</div>`;
+const CM_SVG = '<svg viewBox="0 0 16 14" width="15" height="13" aria-hidden="true"><path d="M1.5 1.5h13v8h-7l-3.5 3v-3h-2.5z" fill="currentColor"/></svg>';
+const cmHtml = (c) => c.comment ? `<span class="cm" data-cm="${c.id}" aria-label="コメントあり">${CM_SVG}</span>` : '';
 
 /* ================= Render ================= */
 function render() {
@@ -577,14 +639,14 @@ function renderList(L) {
     return { k, its };
   });
   const nop = L.filter((c) => c.noPay);
-  const head = `<div class="ahd"><span>No</span><span>契約 / 契約先</span><span>期日</span><span>日数</span><span>金額（税抜）</span><span>進捗</span></div>`;
+  const head = `<div class="ahd"><span>No</span><span>契約 / 契約先</span><span>期日</span><span>日数</span><span>金額（税抜）</span>${progHead()}<span></span></div>`;
   const row = (c, a) => `<div class="ar" data-id="${c.id}">
       <span class="no">${esc(c.no)}</span>
       <div style="min-width:0"><div class="nm2">${esc(c.name || '(無題)')}</div><div class="sub">${esc(c.vendor)}　${esc(c.kubun)}${c.changed ? '　<b>変更あり</b>' : ''}</div></div>
       <span class="dt2"><small>${a ? (a.k.startsWith('pay') ? '支払予定' : '契約終了') : '終了'}</small>${fmt(a ? a.at : c.e)}</span>
       <span class="dd${a && (a.k === 'payOver' || a.k === 'paySoon') ? ' al' : ''}">${a ? (a.k === 'payOver' || a.k === 'termEnd' ? a.d + '<small>日超過</small>' : a.d === 0 ? '本日' : a.d + '<small>日後</small>') : '—'}</span>
       <span class="am">${c.amt ? yen(c.amt) : '—'}</span>
-      <span class="stp">${stepsHtml(c)}</span></div>`;
+      ${progHtml(c)}<span class="cmc">${cmHtml(c)}</span></div>`;
   let html = '<div class="alist">';
   const total = sec.reduce((s, x) => s + x.its.length, 0);
   if (!total) html += '<div class="asec"><div class="empty">アラートはありません</div></div>';
@@ -641,7 +703,7 @@ function renderTimeline(L) {
   if (!G.length) rows = '<div class="empty">該当する契約がありません</div>';
   const lw = leftW();
   $('chart').style.width = (lw + W) + 'px';
-  $('chart').innerHTML = `<div class="head"><div class="corner">CONTRACT</div><div class="scale" style="width:${W}px"><div class="months">${months}</div><div class="ticks${S.zoom === 'month' ? ' hide' : ''}">${ticks}</div></div></div>
+  $('chart').innerHTML = `<div class="head"><div class="corner"><span class="cn">CONTRACT</span>${progHead()}<span class="ach">ALERT</span></div><div class="scale" style="width:${W}px"><div class="months">${months}</div><div class="ticks${S.zoom === 'month' ? ' hide' : ''}">${ticks}</div></div></div>
     <div class="body"><div class="grid" style="left:${lw}px;width:${W}px">${grid}</div>${rows}</div>`;
   if (S.toToday) { S.toToday = false; requestAnimationFrame(goToday); }
 }
@@ -649,6 +711,7 @@ function groupRow(g, col, X, W) {
   const ss = g.items.map((c) => c.s).filter((v) => v != null);
   const es = g.items.flatMap((c) => [c.e, c.p, c._paid]).filter((v) => v != null);
   const amt = g.items.reduce((s, c) => s + c.amt, 0);
+  const nC = g.items.filter((c) => c.comment).length;
   const nA = g.items.filter((c) => c.alerts.length).length, red = g.items.some((c) => c.top && c.top.k.startsWith('pay'));
   let bar = '';
   if (ss.length || es.length) {
@@ -658,7 +721,8 @@ function groupRow(g, col, X, W) {
   return `<div class="row l1${col ? ' collapsed' : ''}" data-g="${esc(g.key)}">
     <div class="cl"><span class="ind"></span><span class="tg" data-tg="1">▼</span>
       <div class="txt"><div class="nm">${esc(g.title)}</div><div class="mt"><b>${esc(g.pno)}</b> · ${esc(g.kubun)} · ${g.items.length}件 · ${yen(amt)}</div></div>
-      ${nA ? `<span class="acnt${red ? '' : ' k'}" title="アラートのある契約 ${nA}件">!${nA}</span>` : ''}
+      <div class="pc"></div>
+      <div class="ac">${nC ? `<span class="cm sum" data-gcm="${esc(g.key)}" aria-label="コメント${nC}件">${CM_SVG}${nC}</span>` : ''}${nA ? `<span class="alm" data-gal="${esc(g.key)}" aria-label="アラート">!</span>` : ''}</div>
     </div>
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
@@ -697,8 +761,9 @@ function contractRow(c, X, W) {
   } else ct += `<span class="nodate" style="left:${X(TODAY) + 10}px">NO DATE</span>`;
   return `<div class="row l2${c.hidden ? ' hid' : ''}${c.changed ? ' chg' : ''}" data-id="${c.id}">
     <div class="cl"><span class="ind"></span><span class="tg none">▼</span>
-      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}${stepsHtml(c)}</div></div>
-      ${c.top ? badge(c.top) : ''}
+      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}</div></div>
+      ${progHtml(c)}
+      <div class="ac">${cmHtml(c)}${c.alerts.length ? `<span class="alm" data-al="${c.id}" aria-label="アラート">!</span>` : ''}</div>
     </div>
     <div class="ct" style="width:${W}px">${ct}</div></div>`;
 }
@@ -722,18 +787,58 @@ function openDetail(id) {
   if (c.changed) kv.push(['変更後工期', per(c._s1, c._e1) + '<span class="ch">CHANGED</span>'], ['変更後支払予定', fmt(c._p1, true)]);
   kv.push(['工期（判定用）', per(c.s, c.e) + rem]);
   const pipe = `<div class="pipe">${STEPS.map(([k, l]) => `<div class="st${c.ok[k] ? ' on' : ''}${c.na[k] ? ' na' : ''}"><b>${l}</b><em>${c['_' + k] != null ? fmt(c['_' + k]) : c.na[k] ? 'NA（対象外）' : (c[k] || '未')}</em></div>`).join('')}</div>`;
+  const cmb = c.comment ? `<div class="issbox cmbox"><div class="th">COMMENT</div><div class="ti">${esc(c.comment)}</div></div>` : '';
   const note = c.note ? `<div class="issbox"><div class="th">備考</div><div class="ti">${esc(c.note)}</div></div>` : '';
   const link = S.url ? `<a class="txtbtn lnk" href="${esc(S.url)}#gid=${esc(S.gid)}&range=A${c.row}" target="_blank" rel="noopener">Open Sheet — Row ${c.row} ↗</a>` : '';
   $('detail').innerHTML = `
     <div class="eyebrow">Contract — ${esc(c.no)}</div>
     <h3>${esc(c.name || '(無題)')}</h3>
     <div class="tags"><span class="tag inv">${esc(c.status || 'Status 未設定')}</span><span class="tag">${esc(c.kubun)}</span>${c.alerts.map((a) => `<span class="tag al">${AL[a.k].lbl} ${dayTxt(a)}</span>`).join('')}${c.paidDone ? '<span class="tag">支払済</span>' : ''}${c.noPay ? '<span class="tag">支払予定日 未設定</span>' : ''}${c.hidden ? '<span class="tag">非表示行</span>' : ''}</div>
-    ${pipe}${note}<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    ${cmb}${pipe}${note}<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     ${link}<button class="pbtn" id="btnClose">Close</button>`;
   $('detailOv').classList.add('open');
   $('btnClose').onclick = closeDetail;
 }
 const closeDetail = () => $('detailOv').classList.remove('open');
+/* コメントのツールチップ（ADPF_Gantt の論点ツールチップと同じ表示） */
+function showTip(el) {
+  if (el.dataset.al || el.dataset.gal) return showAlertTip(el);
+  let list;
+  if (el.dataset.cm) list = S.items.filter((x) => x.id === el.dataset.cm);
+  else list = S.items.filter((x) => x.pkey === el.dataset.gcm && x.comment && (!x.hidden || S.f.showHidden));
+  if (!list.length) return;
+  const one = !!el.dataset.cm;
+  const tip = $('tip');
+  tip.innerHTML = `<div class="th">COMMENT${one ? '' : '（' + list.length + '件）'}</div>`
+    + list.map((x) => `<div class="ti">${one ? '' : `<span class="tw">${esc(x.no)}</span>`}${esc(x.comment)}</div>`).join('')
+    + `<div class="th" style="margin:8px 0 0">クリックで詳細</div>`;
+  tip.classList.add('open');
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.right + 8, y = r.top - 4;
+  if (x + tw > innerWidth - 8) x = Math.max(8, r.left - tw - 8);
+  if (y + th > innerHeight - 8) y = Math.max(8, innerHeight - th - 8);
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => $('tip').classList.remove('open');
+/* アラート「!」のツールチップ：種別と日数を表示 */
+function showAlertTip(el) {
+  const list = el.dataset.al ? S.items.filter((x) => x.id === el.dataset.al)
+    : S.items.filter((x) => x.pkey === el.dataset.gal && x.alerts.length && (!x.hidden || S.f.showHidden));
+  if (!list.length) return;
+  const one = !!el.dataset.al;
+  placeTip(el, `<div class="th">ALERT${one ? '' : '（' + list.length + '件）'}</div>`
+    + list.map((x) => `<div class="ti">${one ? '' : `<span class="tw">${esc(x.no)}</span>`}${x.alerts.map((a) => `<span class="al">${AL[a.k].lbl}</span> ${dayTxt(a)}（${a.k.startsWith('pay') ? '支払予定' : '契約終了'} ${fmt(a.at)}）`).join('<br>')}</div>`).join(''));
+}
+function placeTip(el, html) {
+  const tip = $('tip');
+  tip.innerHTML = html;
+  tip.classList.add('open');
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.right + 8, y = r.top - 4;
+  if (x + tw > innerWidth - 8) x = Math.max(8, r.left - tw - 8);
+  if (y + th > innerHeight - 8) y = Math.max(8, innerHeight - th - 8);
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
 
 /* ================= UI ================= */
 function buildFilterOptions() {
@@ -807,14 +912,20 @@ function bindUI() {
     renderMs('alert'); savePrefs(); render();
   });
   $('chart').addEventListener('click', (e) => {
+    hideTip();
     const g = e.target.closest('.row.l1');
     if (g) {
+      const gc = e.target.closest('.cm.sum');
+      if (gc) { const f = S.items.find((x) => x.pkey === gc.dataset.gcm && x.comment); if (f) openDetail(f.id); return; }
       if (e.target.closest('.cl')) { S.collapsed.has(g.dataset.g) ? S.collapsed.delete(g.dataset.g) : S.collapsed.add(g.dataset.g); savePrefs(); render(); }
       return;
     }
     const r = e.target.closest('[data-id]'); if (r) openDetail(r.dataset.id);
   });
   $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
+  $('chart').addEventListener('mouseover', (e) => { const el = e.target.closest('.cm, .alm'); if (el) showTip(el); });
+  $('chart').addEventListener('mouseout', (e) => { if (e.target.closest('.cm, .alm')) hideTip(); });
+  $('scroller').addEventListener('scroll', hideTip, { passive: true });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDetail(); document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); } });
   $('btnReload').onclick = () => { const pw = store.get(PW_KEY); pw ? fetchData(pw) : showLogin(); };
   $('btnLogout').onclick = () => {
