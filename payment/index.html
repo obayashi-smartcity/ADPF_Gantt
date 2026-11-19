@@ -366,6 +366,15 @@ body.v-list .tl-only{display:none}
 @keyframes hud{0%{opacity:1}70%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){ .alm svg{animation:none} }
 .lg-prog .alm{width:16px;height:14px;background:transparent;margin-right:5px;vertical-align:-3px;display:inline-block}
+/* 警告のある契約行：変更契約と同様に左端の線＋ラベルで強調（赤） */
+.alk{display:inline-block;padding:0 4px;background:var(--accent);color:var(--paper);font-weight:700;letter-spacing:.06em;line-height:1.5}
+.row.alr .cl{background:color-mix(in srgb,var(--accent) 5%,var(--paper));box-shadow:inset 3px 0 0 var(--accent)}
+.row.alr:hover .cl{background:color-mix(in srgb,var(--accent) 9%,var(--paper))}
+.row.alr .ct{background:color-mix(in srgb,var(--accent) 3%,transparent)}
+.row.alr .nm{color:var(--ink);font-weight:700}
+.row.alr.chg .cl{box-shadow:inset 3px 0 0 var(--accent),inset 6px 0 0 var(--key)}
+.pc.ph span{font-family:"Inter",sans-serif;font-weight:800;letter-spacing:.06em;font-size:9px;cursor:help}
+.pipe .st b small{font-size:9px;font-weight:500;color:var(--mute);margin-left:4px}
 </style>
 </head>
 <body>
@@ -409,8 +418,8 @@ body.v-list .tl-only{display:none}
       <span><i class="lg-mk dia" style="background:var(--ink);border-color:var(--ink)"></i>支払日</span>
       <span><i style="background:var(--accent);height:2px"></i>アラート</span>
     </div>
-    <div class="legend lg-prog" title="進捗列（検収・検収書・請求書・支払）の見方">
-      <span>進捗</span>
+    <div class="legend lg-prog" title="進捗列（ACPT・CERT・INV・PMT）の見方">
+      <span title="ACPT＝検収 / CERT＝検収書 / INV＝請求書 / PMT＝支払">進捗（ACPT 検収・CERT 検収書・INV 請求書・PMT 支払）</span>
       <span><b class="sq on"></b>済（日付あり）</span>
       <span><b class="sq na"></b>NA（対象外）</span>
       <span><b class="sq"></b>未</span>
@@ -469,7 +478,7 @@ const AL = {
   termSoon: { lbl:'工期間近', cls:'a0', rank:3, ds:'契約終了日まで' + END_SOON + '日以内（未検収）' },
 };
 const AL_KEYS = Object.keys(AL);
-const STEPS = [['insp','検収'], ['doc','検収書'], ['inv','請求書'], ['paid','支払']];
+const STEPS = [['insp','検収','ACPT'], ['doc','検収書','CERT'], ['inv','請求書','INV'], ['paid','支払','PMT']];
 /* 進捗欄（検収日〜支払処理日）に NA と入力されていれば「対象外＝クリア」として扱う */
 const isNA = (v) => /^(N\/?A|対象外)$/i.test(String(v || '').normalize('NFKC').trim());
 const MULTI = ['alert', 'kubun', 'vendor', 'status'];
@@ -617,8 +626,8 @@ const dayTxt = (a) => a.k === 'payOver' || a.k === 'termEnd' ? a.d + '日超過'
 const badge = (a, long) => `<span class="ab ${AL[a.k].cls}" title="${esc(AL[a.k].ds)}">${AL[a.k].lbl}${long ? ' ' + dayTxt(a) : ''}</span>`;
 /* 進捗（検収→検収書→請求書→支払）：■済（日付あり） ■グレー＝NA（対象外） □未 */
 const stepTxt = (c, k) => c['_' + k] != null ? fmt(c['_' + k]) + ' 済' : c.na[k] ? 'NA（対象外）' : '未';
-const progHtml = (c) => `<div class="pc">${STEPS.map(([k, l]) => `<span class="ps${c.ok[k] ? (c.na[k] ? ' na' : ' on') : ''}" title="${l}：${stepTxt(c, k)}"><i></i></span>`).join('')}</div>`;
-const progHead = () => `<div class="pc ph">${STEPS.map(([, l]) => `<span>${l}</span>`).join('')}</div>`;
+const progHtml = (c) => `<div class="pc">${STEPS.map(([k, l, a]) => `<span class="ps${c.ok[k] ? (c.na[k] ? ' na' : ' on') : ''}" title="${a}（${l}）：${stepTxt(c, k)}"><i></i></span>`).join('')}</div>`;
+const progHead = () => `<div class="pc ph">${STEPS.map(([, l, a]) => `<span title="${a}＝${l}">${a}</span>`).join('')}</div>`;
 /* 警告アイコン：三角に「!」（戦闘機の警告灯風に点滅） */
 const AL_SVG = '<svg viewBox="0 0 26 23" width="20" height="18" aria-hidden="true"><path class="o" d="M13 .8 25.2 22.2H.8Z"/><path class="f" d="M13 4.4 22.1 20.3H3.9Z"/><rect class="x" x="11.7" y="9" width="2.6" height="6.4"/><rect class="x" x="11.7" y="16.6" width="2.6" height="2.4"/></svg>';
 const CM_SVG = '<svg viewBox="0 0 16 14" width="15" height="13" aria-hidden="true"><path d="M1.5 1.5h13v8h-7l-3.5 3v-3h-2.5z" fill="currentColor"/></svg>';
@@ -771,9 +780,9 @@ function contractRow(c, X, W) {
     ].filter(Boolean).join('　');
     ct += `<span class="bl" style="left:${Math.max(...pts) + 12}px">${lbl}</span>`;
   } else ct += `<span class="nodate" style="left:${X(TODAY) + 10}px">NO DATE</span>`;
-  return `<div class="row l2${c.hidden ? ' hid' : ''}${c.changed ? ' chg' : ''}" data-id="${c.id}">
+  return `<div class="row l2${c.hidden ? ' hid' : ''}${c.changed ? ' chg' : ''}${c.alerts.length ? ' alr' : ''}" data-id="${c.id}">
     <div class="cl"><span class="ind"></span><span class="tg none">▼</span>
-      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}</div></div>
+      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.alerts.length ? ' <span class="alk">警告</span>' : ''}${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}</div></div>
       ${progHtml(c)}
       <div class="ac">${cmHtml(c)}${c.alerts.length ? `<span class="alm" data-al="${c.id}" aria-label="アラート">${AL_SVG}</span>` : ''}</div>
     </div>
@@ -798,7 +807,7 @@ function openDetail(id) {
   ];
   if (c.changed) kv.push(['変更後工期', per(c._s1, c._e1) + '<span class="ch">CHANGED</span>'], ['変更後支払予定', fmt(c._p1, true)]);
   kv.push(['工期（判定用）', per(c.s, c.e) + rem]);
-  const pipe = `<div class="pipe">${STEPS.map(([k, l]) => `<div class="st${c.ok[k] ? ' on' : ''}${c.na[k] ? ' na' : ''}"><b>${l}</b><em>${c['_' + k] != null ? fmt(c['_' + k]) : c.na[k] ? 'NA（対象外）' : (c[k] || '未')}</em></div>`).join('')}</div>`;
+  const pipe = `<div class="pipe">${STEPS.map(([k, l, a]) => `<div class="st${c.ok[k] ? ' on' : ''}${c.na[k] ? ' na' : ''}"><b>${a}<small>${l}</small></b><em>${c['_' + k] != null ? fmt(c['_' + k]) : c.na[k] ? 'NA（対象外）' : (c[k] || '未')}</em></div>`).join('')}</div>`;
   const cmb = c.comment ? `<div class="issbox cmbox"><div class="th">COMMENT</div><div class="ti">${esc(c.comment)}</div></div>` : '';
   const note = c.note ? `<div class="issbox"><div class="th">備考</div><div class="ti">${esc(c.note)}</div></div>` : '';
   const link = S.url ? `<a class="txtbtn lnk" href="${esc(S.url)}#gid=${esc(S.gid)}&range=A${c.row}" target="_blank" rel="noopener">Open Sheet — Row ${c.row} ↗</a>` : '';
