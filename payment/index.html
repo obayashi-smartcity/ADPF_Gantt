@@ -280,6 +280,31 @@ body.v-list .tl-only{display:none}
 .dt .lnk{display:inline-block;margin-top:16px;color:var(--ink);text-decoration:none}
 .kv .ch{font-size:9px;letter-spacing:.14em;color:var(--accent);margin-left:6px}
 @media (max-width:640px){ .cl .ab{display:none} }
+/* ===== Gantt：当初＝グレー／変更後＝紺（ADPF_Gantt の key 色） ===== */
+.l2 .br.b0{background:var(--lv2)}
+.l2 .br.b1{background:var(--key)}
+.l2 .br.up{top:32%;height:7px}
+.l2 .br.dn{top:66%;height:11px}
+.l2 .br.done{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
+.mk{pointer-events:auto;cursor:help}
+.mk.pay.p0{border-color:var(--lv2)}
+.mk.pay.p1{border-color:var(--key)}
+.mk.pay.over{background:var(--accent);border-color:var(--accent)}
+.mk.pay.soon{border-color:var(--accent)}
+.mk.insp{width:9px;height:9px;box-shadow:0 0 0 2px var(--paper)}
+.mk.paid{width:11px;height:11px;transform:translate(-50%,-50%) rotate(45deg);background:var(--ink);border:2px solid var(--ink);box-shadow:0 0 0 2px var(--paper);font-size:0}
+.bl .c1{color:var(--key);font-weight:700}
+.bl b{color:var(--ink)}
+.chgk{display:inline-block;padding:0 4px;background:var(--key);color:var(--paper);font-weight:700;letter-spacing:.06em;line-height:1.5}
+.row.chg .cl{box-shadow:inset 3px 0 0 var(--key)}
+.legend .lg-mk{width:8px;height:8px;margin-right:6px}
+.legend .lg-mk.dia{transform:rotate(45deg);border:2px solid;background:transparent;margin-right:7px}
+.legend .lg-mk.dia+.lg-mk.dia{margin-left:2px}
+.kv .ch{color:var(--key)}
+/* Contract 列を広く、Gantt を狭く */
+:root{--left:540px}
+@media (max-width:1100px){ :root{--left:400px} }
+@media (max-width:640px){ :root{--left:190px} }
 </style>
 </head>
 <body>
@@ -299,8 +324,8 @@ body.v-list .tl-only{display:none}
 
   <div class="tb">
     <div class="grp" id="view">
+      <button class="txtbtn" data-v="tl" title="契約工期・検収日・支払日をガントチャートで表示">Gantt</button>
       <button class="txtbtn" data-v="list" title="アラートを種別ごとに一覧">Alerts</button>
-      <button class="txtbtn" data-v="tl" title="契約工期と支払予定をタイムラインで表示">Timeline</button>
     </div>
     <span class="sep"></span>
     <div class="grp tl-only" id="zoom">
@@ -316,10 +341,11 @@ body.v-list .tl-only{display:none}
       <button class="txtbtn" id="btnFilter">Filter</button>
     </div>
     <div class="legend tl-only">
-      <span><i style="background:var(--lv2)"></i>工期</span>
-      <span><i style="background:transparent;border:1px dashed var(--hair2);height:8px"></i>当初工期</span>
-      <span><i style="width:9px;height:9px;transform:rotate(45deg);border:2px solid var(--ink);margin-right:8px"></i>支払予定</span>
-      <span><i style="width:7px;height:7px;border-radius:50%;background:var(--ink)"></i>検収</span>
+      <span><i style="background:var(--lv2)"></i>当初工期</span>
+      <span><i style="background:var(--key)"></i>変更後工期</span>
+      <span><i class="lg-mk" style="border-radius:50%;background:var(--ink)"></i>検収日</span>
+      <span><i class="lg-mk dia" style="border-color:var(--lv2)"></i><i class="lg-mk dia" style="border-color:var(--key)"></i>支払予定（当初／変更後）</span>
+      <span><i class="lg-mk dia" style="background:var(--ink);border-color:var(--ink)"></i>支払日</span>
       <span><i style="background:var(--accent);height:2px"></i>アラート</span>
     </div>
     <input type="search" class="search" id="q" placeholder="Search">
@@ -352,9 +378,9 @@ body.v-list .tl-only{display:none}
 <script>
 /* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のままでも動作 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzkjXaP9IVSTNNWt09hCn8juJWHWbHE5vfjBDuvLlCytL-yZq40t2DsSWIeQibSx5OHPQ/exec';
-const PW_KEY = 'pay_pw', PREF_KEY = 'pay_prefs_v1';
+const PW_KEY = 'pay_pw', PREF_KEY = 'pay_prefs_v2';
 const DAY = 86400000;
-const ZOOMS = { day: 24, week: 8, month: 3 };
+const ZOOMS = { day: 18, week: 5, month: 1.8 };
 const WDJ = ['日','月','火','水','木','金','土'];
 /* アラートのしきい値（日） */
 const DUE_SOON = 30;    // 支払予定日まで30日以内 → 支払接近
@@ -380,7 +406,7 @@ const newFilter = () => ({ alert:[], kubun:[], vendor:[], status:[], q:'', onlyA
 const $ = (id) => document.getElementById(id);
 const S = {
   items: [], url: '', gid: '',
-  view: 'list', zoom: innerWidth <= 640 ? 'month' : 'week',
+  view: 'tl', zoom: 'month',
   f: newFilter(), opts: {}, collapsed: new Set(), toToday: true, range: null,
 };
 const TODAY = (() => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY; })();
@@ -528,13 +554,11 @@ function render() {
 }
 function renderStats(L) {
   const cnt = (k) => L.filter((c) => c.alerts.some((a) => a.k === k)).length;
-  const unpaid = L.filter((c) => !c.closed).reduce((s, c) => s + c.amt, 0);
   const sel = S.f.alert.length === 1 ? S.f.alert[0] : '';
   const st = (k, label) => { const n = cnt(k); return `<div class="stat${n && (k === 'payOver' || k === 'paySoon') ? ' alert' : ''}${sel === AL[k].lbl ? ' sel' : ''}" data-al="${k}" title="${esc(AL[k].ds)}（クリックで絞り込み）"><span class="n">${n}</span><span class="l">${label}</span></div>`; };
   $('stats').innerHTML = `
     <div class="stat" data-al="" title="${filtering() ? 'フィルタ適用中の件数' : '全件（非表示行を除く）'}"><span class="n">${L.length}</span><span class="l">Contracts</span></div>
-    ${st('payOver', 'Pay Overdue')}${st('paySoon', 'Pay ≤' + DUE_SOON + 'd')}${st('termEnd', 'Term Ended')}
-    <div class="stat" data-al="" title="支払処理日が未入力の契約金額（税抜）合計"><span class="n">${man(unpaid)}</span><span class="l">Unpaid</span></div>`;
+    ${st('payOver', 'Pay Overdue')}${st('paySoon', 'Pay ≤' + DUE_SOON + 'd')}`;
 }
 
 /* ---------- Alerts（リスト） ---------- */
@@ -572,10 +596,13 @@ function calcRange() {
   S.items.forEach((c) => DATE_KEYS.forEach((k) => { if (c['_' + k] != null) ds.push(c['_' + k]); }));
   const toD = (y, m) => Date.UTC(y, m, 1) / DAY;
   const a = new Date(Math.min(...ds) * DAY), b = new Date(Math.max(...ds) * DAY);
-  return { start: toD(a.getUTCFullYear(), a.getUTCMonth()), end: toD(b.getUTCFullYear(), b.getUTCMonth() + 2) - 1 };
+  return { start: toD(a.getUTCFullYear(), a.getUTCMonth()), end: toD(b.getUTCFullYear(), b.getUTCMonth() + 7) - 1 };
 }
 function renderTimeline(L) {
-  const R = S.range = calcRange(), px = ZOOMS[S.zoom], W = Math.round((R.end - R.start + 1) * px);
+  const R = S.range = calcRange(), px = ZOOMS[S.zoom];
+  const minW = $('scroller').clientWidth - leftW() + 360;   // ラベルが切れないよう右側に余白を確保
+  while ((R.end - R.start + 1) * px < minW) { const t = new Date((R.end + 1) * DAY); R.end = Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1) / DAY - 1; }
+  const W = Math.round((R.end - R.start + 1) * px);
   const X = (d) => Math.round((d - R.start) * px);
   let months = '', ticks = '', grid = '';
   for (let d = R.start; d <= R.end;) {
@@ -628,31 +655,42 @@ function groupRow(g, col, X, W) {
     </div>
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
+/* 契約行：工期バー（当初＝グレー／変更後＝紺）＋ ●検収日 ◇支払予定日 ◆支払日（実績） */
 function contractRow(c, X, W) {
   let ct = '';
   const pts = [];
-  if (c.changed && c._s0 != null && c._e0 != null && (c._s0 !== c.s || c._e0 !== c.e)) ct += `<div class="br0" style="left:${X(c._s0) - 3}px;width:${X(c._e0 + 1) - X(c._s0) + 6}px"></div>`;
-  if (c.s != null || c.e != null) {
-    const s = c.s != null ? c.s : c.e, e = c.e != null ? c.e : c.s;
-    const over = c.alerts.some((a) => a.k === 'termEnd');
-    ct += `<div class="br${c.paidDone ? ' done' : ''}${over ? ' over' : ''}" style="left:${X(s)}px;width:${Math.max(3, X(e + 1) - X(s))}px"></div>`;
+  const over = c.alerts.some((a) => a.k === 'termEnd');
+  const has0 = c._s0 != null || c._e0 != null;
+  const has1 = c._s1 != null || c._e1 != null;
+  const bar = (s, e, cls, lbl, eff) => {
+    if (s == null) s = e; if (e == null) e = s;
     pts.push(X(e + 1));
-  }
-  if (c._p1 != null && c._p0 != null && c._p0 !== c._p1) ct += `<span class="mk pay ghost" style="left:${X(c._p0)}px" title="当初支払予定"></span>`;
-  if (c._insp != null) { ct += `<span class="mk insp" style="left:${X(c._insp)}px"></span>`; pts.push(X(c._insp)); }
-  if (c.p != null) {
-    const pa = c.alerts.find((a) => a.k.startsWith('pay'));
-    ct += `<span class="mk pay${c.paidDone ? '' : pa ? (pa.k === 'payOver' ? ' over' : ' soon') : ''}" style="left:${X(c.p)}px"></span>`;
-    pts.push(X(c.p));
-  }
-  if (c._paid != null) { ct += `<span class="mk paid" style="left:${X(c._paid)}px">✓</span>`; pts.push(X(c._paid)); }
+    return `<div class="br ${cls}${c.paidDone ? ' done' : ''}${eff && over ? ' over' : ''}" style="left:${X(s)}px;width:${Math.max(3, X(e + 1) - X(s))}px" title="${lbl}工期 ${fmt(s)} 〜 ${fmt(e)}"></div>`;
+  };
+  if (has0 && has1) {
+    ct += bar(c._s0, c._e0, 'b0 up', '当初', false);
+    ct += bar(c._s1 != null ? c._s1 : c._s0, c._e1 != null ? c._e1 : c._e0, 'b1 dn', '変更後', true);
+  } else if (has1) ct += bar(c._s1, c._e1, 'b1', '変更後', true);
+  else if (has0) ct += bar(c._s0, c._e0, 'b0', '当初', true);
+  const pa = c.alerts.find((a) => a.k.startsWith('pay'));
+  const st = c.paidDone || !pa ? '' : pa.k === 'payOver' ? ' over' : ' soon';
+  const pay = (d, cls, lbl, eff) => { pts.push(X(d)); return `<span class="mk pay ${cls}${eff ? st : ''}" style="left:${X(d)}px" title="${lbl}支払予定日 ${fmt(d)}"></span>`; };
+  if (c._p0 != null && (c._p1 == null || c._p1 !== c._p0)) ct += pay(c._p0, 'p0', '当初', c._p1 == null);
+  if (c._p1 != null) ct += pay(c._p1, 'p1', '変更後', true);
+  if (c._insp != null) { ct += `<span class="mk insp" style="left:${X(c._insp)}px" title="検収日 ${fmt(c._insp)}"></span>`; pts.push(X(c._insp)); }
+  if (c._paid != null) { ct += `<span class="mk paid" style="left:${X(c._paid)}px" title="支払日（支払処理日） ${fmt(c._paid)}"></span>`; pts.push(X(c._paid)); }
   if (pts.length) {
-    const lbl = [c.p != null ? '支払 ' + fmtS(c.p) : '', ...c.alerts.map((a) => `<span class="al">${AL[a.k].lbl} ${dayTxt(a)}</span>`), c.paidDone ? '支払済' : ''].filter(Boolean).join('　');
+    const lbl = [
+      c._insp != null ? '検収 ' + fmtS(c._insp) : '',
+      c.p != null ? `支払予定 <span class="${c._p1 != null ? 'c1' : ''}">${fmtS(c.p)}</span>` : '',
+      c._paid != null ? '<b>支払 ' + fmtS(c._paid) + '</b>' : '',
+      ...c.alerts.map((a) => `<span class="al">${AL[a.k].lbl} ${dayTxt(a)}</span>`),
+    ].filter(Boolean).join('　');
     ct += `<span class="bl" style="left:${Math.max(...pts) + 12}px">${lbl}</span>`;
   } else ct += `<span class="nodate" style="left:${X(TODAY) + 10}px">NO DATE</span>`;
-  return `<div class="row l2${c.hidden ? ' hid' : ''}" data-id="${c.id}">
+  return `<div class="row l2${c.hidden ? ' hid' : ''}${c.changed ? ' chg' : ''}" data-id="${c.id}">
     <div class="cl"><span class="ind"></span><span class="tg none">▼</span>
-      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b> · ${esc(c.vendor)}${stepsHtml(c)}</div></div>
+      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}${stepsHtml(c)}</div></div>
       ${c.top ? badge(c.top) : ''}
     </div>
     <div class="ct" style="width:${W}px">${ct}</div></div>`;
@@ -660,7 +698,7 @@ function contractRow(c, X, W) {
 function goToday() {
   if (!S.range || S.view !== 'tl') return;
   const sc = $('scroller'), x = (TODAY - S.range.start) * ZOOMS[S.zoom];
-  sc.scrollLeft = Math.max(0, x - (sc.clientWidth - leftW()) * 0.35);
+  sc.scrollLeft = Math.max(0, x - (sc.clientWidth - leftW()) * 0.6);
 }
 
 /* ================= Detail ================= */
@@ -758,6 +796,7 @@ function bindUI() {
     const k = st.dataset.al;
     S.f.alert = k && !(S.f.alert.length === 1 && S.f.alert[0] === AL[k].lbl) ? [AL[k].lbl] : [];
     if (k) S.view = 'list';
+    S.toToday = S.view === 'tl';
     renderMs('alert'); savePrefs(); render();
   });
   $('chart').addEventListener('click', (e) => {
