@@ -7,11 +7,17 @@ ADPF_Gantt と同じデザイン・構成で、スプレッドシート「ADPF_�
 | 場所 | 内容 |
 |---|---|
 | Apps Script「ADPF_Payment」 | `コード.gs`。パスワード確認後にシートを JSON で返す（doPost / google.script.run）。doGet は Drive の HTML を表示 |
-| Drive `ADPF_Payment_index.html` | 画面。GAS の /exec を開くとこれが表示される（差し替えるだけで反映、再デプロイ不要） |
+| Drive `ADPF_Payment_index.html` | 画面。GAS の /exec を開くとこれが表示される。差し替えは Drive の「版を管理」で新しい版をアップロード（ID が変わる場合はスクリプトプロパティ HTML_FILE_ID を更新）。再デプロイ不要 |
 | このフォルダの `index.html` | 外部ホスティング用（API_URL に /exec を設定済み） |
 
 - Web アプリ URL: https://script.google.com/macros/s/AKfycbzkjXaP9IVSTNNWt09hCn8juJWHWbHE5vfjBDuvLlCytL-yZq40t2DsSWIeQibSx5OHPQ/exec
-- スクリプトプロパティ: `PASSWORD`（必須）／`SHEET_ID`・`SHEET_NAME`・`HTML_FILE_ID`（任意。未設定時はコード内の既定値）
+- スクリプトプロパティ: `PASSWORD`／`SHEET_ID`／`SHEET_NAME`（契約支払）／`HTML_FILE_ID`（画面ファイルの Drive ID）
+
+## Gantt の見方
+- 工期バー：グレー＝当初、紺＝変更後（変更がある契約は上段に当初・下段に変更後を表示し、左端に紺線と「変更」マーク）
+- ●検収日　◇支払予定日（グレー＝当初／紺＝変更後、赤＝超過・接近）　◆支払日（支払処理日）
+- バーの右に「検収／支払予定／支払」の日付とアラートを表示。マーカーにカーソルを当てると日付を表示
+- 上部 KPI：Contracts／Pay Overdue／Pay ≤30d（クリックで Alerts を絞り込み）
 
 ## アラート判定（今日基準）
 | 種別 | 条件 |
@@ -23,6 +29,7 @@ ADPF_Gantt と同じデザイン・構成で、スプレッドシート「ADPF_�
 
 - 日付は「変更後」に入力があればそちらを、なければ「当初」を使う
 - Status＝Close、または 支払処理日 入力済みの契約はアラート対象外
+- 検収日〜支払処理日に「NA」と入力した項目は対象外＝進捗クリア（グレーで表示）
 - A列（非表示）＝1 の行は表示しない（Filter の「非表示行も表示」で表示可）
 - 支払予定日が空欄の契約は Alerts 画面下部「支払予定日 未設定」に表示
 - しきい値は index.html の `DUE_SOON` / `END_SOON` で変更

@@ -305,6 +305,9 @@ body.v-list .tl-only{display:none}
 :root{--left:540px}
 @media (max-width:1100px){ :root{--left:400px} }
 @media (max-width:640px){ :root{--left:190px} }
+/* NA（対象外）はクリア扱い：グレーで塗る */
+.steps i.on.na{background:var(--lv2);border-color:var(--lv2)}
+.pipe .st.na b::before{background:var(--lv2);border-color:var(--lv2)}
 </style>
 </head>
 <body>
@@ -400,6 +403,8 @@ const AL = {
 };
 const AL_KEYS = Object.keys(AL);
 const STEPS = [['insp','検収'], ['doc','検収書'], ['inv','請求書'], ['paid','支払']];
+/* 進捗欄（検収日〜支払処理日）に NA と入力されていれば「対象外＝クリア」として扱う */
+const isNA = (v) => /^(N\/?A|対象外)$/i.test(String(v || '').normalize('NFKC').trim());
 const MULTI = ['alert', 'kubun', 'vendor', 'status'];
 const BLANK = '', BLANK_LABEL = '(空欄)', NONE = 'なし';
 const newFilter = () => ({ alert:[], kubun:[], vendor:[], status:[], q:'', onlyAlert:false, showHidden:false });
@@ -467,6 +472,8 @@ function toContracts(res) {
     c.hidden = c.hide.normalize('NFKC').trim() === '1';
     c.sk = statusKey(c.status);
     DATE_KEYS.forEach((k) => { c['_' + k] = toNum(c[k]); });
+    c.na = {}; STEPS.forEach(([k]) => { c.na[k] = isNA(c[k]); });
+    c.ok = {}; STEPS.forEach(([k]) => { c.ok[k] = c['_' + k] != null || c.na[k]; });   // 日付あり or NA → クリア
     c.s = c._s1 != null ? c._s1 : c._s0;
     c.e = c._e1 != null ? c._e1 : c._e0;
     c.p = c._p1 != null ? c._p1 : c._p0;
@@ -477,7 +484,7 @@ function toContracts(res) {
     c.kubun = pm ? pm[3] : '—';
     c.ptitle = pm ? pm[4] : (c.project || c.pno);
     c.pkey = c.project || c.pno;
-    c.paidDone = c._paid != null;
+    c.paidDone = c.ok.paid;
     c.closed = c.sk === 'close' || c.paidDone;
     c.noPay = !c.closed && c.p == null;
     c.alerts = calcAlerts(c);
@@ -494,7 +501,7 @@ function calcAlerts(c) {
     if (d < 0) a.push({ k:'payOver', d:-d, at:c.p });
     else if (d <= DUE_SOON) a.push({ k:'paySoon', d, at:c.p });
   }
-  if (c._insp == null && c.e != null) {
+  if (!c.ok.insp && c.e != null) {
     const d = c.e - TODAY;
     if (d < 0) a.push({ k:'termEnd', d:-d, at:c.e });
     else if (d <= END_SOON) a.push({ k:'termSoon', d, at:c.e });
@@ -541,7 +548,7 @@ const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
 const man = (n) => n >= 1e8 ? (n / 1e8).toFixed(2) + '億' : Math.round(n / 1e4).toLocaleString('ja-JP') + '万';
 const dayTxt = (a) => a.k === 'payOver' || a.k === 'termEnd' ? a.d + '日超過' : a.d === 0 ? '本日' : 'あと' + a.d + '日';
 const badge = (a, long) => `<span class="ab ${AL[a.k].cls}" title="${esc(AL[a.k].ds)}">${AL[a.k].lbl}${long ? ' ' + dayTxt(a) : ''}</span>`;
-const stepsHtml = (c) => `<span class="steps" title="${STEPS.map(([k, l]) => l + (c['_' + k] != null ? '済' : '未')).join(' → ')}">${STEPS.map(([k]) => `<i${c['_' + k] != null ? ' class="on"' : ''}></i>`).join('')}</span>`;
+const stepsHtml = (c) => `<span class="steps" title="${STEPS.map(([k, l]) => l + (c.na[k] ? 'NA' : c.ok[k] ? '済' : '未')).join(' → ')}">${STEPS.map(([k]) => `<i${c.ok[k] ? ` class="on${c.na[k] ? ' na' : ''}"` : ''}></i>`).join('')}</span>`;
 
 /* ================= Render ================= */
 function render() {
@@ -681,7 +688,7 @@ function contractRow(c, X, W) {
   if (c._paid != null) { ct += `<span class="mk paid" style="left:${X(c._paid)}px" title="支払日（支払処理日） ${fmt(c._paid)}"></span>`; pts.push(X(c._paid)); }
   if (pts.length) {
     const lbl = [
-      c._insp != null ? '検収 ' + fmtS(c._insp) : '',
+      c._insp != null ? '検収 ' + fmtS(c._insp) : c.na.insp ? '検収 NA' : '',
       c.p != null ? `支払予定 <span class="${c._p1 != null ? 'c1' : ''}">${fmtS(c.p)}</span>` : '',
       c._paid != null ? '<b>支払 ' + fmtS(c._paid) + '</b>' : '',
       ...c.alerts.map((a) => `<span class="al">${AL[a.k].lbl} ${dayTxt(a)}</span>`),
@@ -714,7 +721,7 @@ function openDetail(id) {
   ];
   if (c.changed) kv.push(['変更後工期', per(c._s1, c._e1) + '<span class="ch">CHANGED</span>'], ['変更後支払予定', fmt(c._p1, true)]);
   kv.push(['工期（判定用）', per(c.s, c.e) + rem]);
-  const pipe = `<div class="pipe">${STEPS.map(([k, l]) => `<div class="st${c['_' + k] != null ? ' on' : ''}"><b>${l}</b><em>${c['_' + k] != null ? fmt(c['_' + k]) : (c[k] || '未')}</em></div>`).join('')}</div>`;
+  const pipe = `<div class="pipe">${STEPS.map(([k, l]) => `<div class="st${c.ok[k] ? ' on' : ''}${c.na[k] ? ' na' : ''}"><b>${l}</b><em>${c['_' + k] != null ? fmt(c['_' + k]) : c.na[k] ? 'NA（対象外）' : (c[k] || '未')}</em></div>`).join('')}</div>`;
   const note = c.note ? `<div class="issbox"><div class="th">備考</div><div class="ti">${esc(c.note)}</div></div>` : '';
   const link = S.url ? `<a class="txtbtn lnk" href="${esc(S.url)}#gid=${esc(S.gid)}&range=A${c.row}" target="_blank" rel="noopener">Open Sheet — Row ${c.row} ↗</a>` : '';
   $('detail').innerHTML = `
