@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contract &amp; Payment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0a0a; --ink2:#3a3a3a; --mute:#8a8a8a; --hair:#e6e6e6; --hair2:#cfcfcf; --paper:#ffffff; --tint:#f6f6f6;
+  --lv1:#0a0a0a; --lv2:#7a7a7a; --lv3:#c9c9c9;
+  --accent:#e4002b;
+  --key:#2e3391; --keybg:#ecedf5;   /* 報告（mark=1）のハイライト色 */
+  --dis:#ba42f2; --disbg:#f8edfe;   /* 議論（mark=2）のハイライト色 */
+  --left:340px; --h1:56px; --h2:46px; --h3:40px;
+  --font:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
+}
+@media (max-width:640px){ :root{ --left:168px; --h1:58px; --h2:50px; --h3:46px; } }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;letter-spacing:.01em}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ===== Header ===== */
+.hd{display:flex;align-items:center;gap:24px;padding:12px 28px;padding-top:calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--ink)}
+.hd .brand{flex:0 1 auto;min-width:0}
+.eyebrow{font-size:10px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
+.hd h1{margin:0;font-size:16px;font-weight:900;line-height:1.2;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd .upd{font-size:10px;color:var(--mute);margin-top:2px;letter-spacing:.06em;white-space:nowrap}
+.txtbtn{background:none;border:0;padding:6px 0;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);position:relative}
+.txtbtn::after{content:"";position:absolute;left:0;right:100%;bottom:2px;height:1px;background:var(--ink);transition:right .25s}
+.txtbtn:hover::after,.txtbtn.on::after{right:0}
+.hd nav{display:flex;gap:18px;margin-left:auto}
+
+/* ===== KPI ===== */
+.stats{display:flex;align-items:center;border-left:1px solid var(--hair2)}
+.stat{display:flex;align-items:baseline;gap:6px;padding:0 16px;border-right:1px solid var(--hair)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:16px;font-weight:800;line-height:1;font-feature-settings:"tnum"}
+.stat .l{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.stat.alert .n{color:var(--accent)}
+
+@media (max-width:640px){
+  .hd{padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top))}
+  .hd .brand,.stats{display:none}
+  .hd nav{gap:14px}
+}
+
+/* ===== Toolbar ===== */
+.tb{display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;padding:10px 28px;border-bottom:1px solid var(--hair)}
+.tb .grp{display:flex;gap:14px;align-items:center}
+.tb .sep{width:1px;height:14px;background:var(--hair2)}
+.search{flex:1;min-width:140px;border:0;border-bottom:1px solid var(--hair2);height:32px;font-size:16px;padding:0 2px;outline:none;background:transparent}
+.search:focus{border-bottom-color:var(--ink)}
+@media (min-width:641px){ .search{font-size:13px} }
+.legend{display:flex;gap:14px;align-items:center;font-size:10px;letter-spacing:.16em;color:var(--mute);font-weight:600}
+.legend i{display:inline-block;width:18px;height:6px;margin-right:6px;vertical-align:middle}
+.filters{display:none;width:100%;gap:12px 20px;flex-wrap:wrap;padding:8px 0 4px}
+.filters.open{display:flex}
+.filters .fld{display:flex;flex-direction:column;gap:4px;flex:1 1 150px;min-width:0;position:relative}
+.filters .fl{font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+.filters label.chk{display:flex}
+/* 複数選択ドロップダウン */
+.ms-btn{width:100%;height:34px;border:0;border-bottom:1px solid var(--hair2);background:transparent;font-size:16px;padding:0 18px 0 2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;letter-spacing:0}
+.ms-btn::after{content:"▾";position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--mute)}
+.ms.open .ms-btn,.ms-btn:focus{border-bottom-color:var(--ink);outline:none}
+.ms.on .ms-btn{font-weight:700}
+@media (min-width:641px){ .ms-btn{font-size:13px} }
+.ms-pop{display:none;position:absolute;left:0;top:100%;z-index:40;min-width:100%;width:max-content;max-width:min(320px,90vw);max-height:300px;overflow:auto;background:var(--paper);border:1px solid var(--ink);box-shadow:0 8px 24px rgba(10,10,10,.14);padding:6px 0}
+.ms.open .ms-pop{display:block}
+.ms-act{display:flex;gap:14px;padding:4px 12px 8px;border-bottom:1px solid var(--hair)}
+.ms-act button{background:none;border:0;padding:2px 0;font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--ink2)}
+.ms-act button:hover{text-decoration:underline}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+.ms-opt:hover{background:var(--tint)}
+.ms-opt input{width:15px;height:15px;margin:0;accent-color:var(--ink)}
+.ms-opt .bl0{color:var(--mute)}
+.filters .chk{flex-direction:row;align-items:center;gap:8px;flex:0 0 auto;font-size:11px;letter-spacing:.1em;color:var(--ink)}
+.filters .chk input{width:16px;height:16px;accent-color:var(--ink)}
+@media (max-width:640px){ .tb{padding:8px 16px;gap:6px 14px} .legend{display:none} }
+
+/* ===== Chart ===== */
+.scroller{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.chart{position:relative;min-height:100%}
+.head{position:sticky;top:0;z-index:5;display:flex;background:var(--paper);border-bottom:1px solid var(--ink)}
+.corner{position:sticky;left:0;z-index:6;width:var(--left);flex:0 0 var(--left);background:var(--paper);border-right:1px solid var(--hair);display:flex;align-items:flex-end;padding:0 16px 8px;font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute)}
+.scale{position:relative;flex:0 0 auto}
+.months{position:relative;height:26px}
+.month{position:absolute;top:0;height:100%;border-left:1px solid var(--hair2);padding:7px 8px 0;font-size:10px;font-weight:700;letter-spacing:.14em;white-space:nowrap;overflow:hidden}
+.ticks{position:relative;height:28px}
+.ticks.hide{display:none}
+.tick{position:absolute;top:0;height:100%;font-size:9px;text-align:center;color:var(--mute);line-height:1.3;padding-top:2px;overflow:hidden;white-space:nowrap;font-feature-settings:"tnum"}
+.tick.we{color:#b5b5b5}
+.tick.today{color:var(--paper);background:var(--ink);font-weight:700}
+.body{position:relative}
+.grid{position:absolute;top:0;bottom:0;pointer-events:none;z-index:0}
+.grid .we{position:absolute;top:0;bottom:0;background:var(--tint)}
+.grid .wl{position:absolute;top:0;bottom:0;border-left:1px solid #f0f0f0}
+.grid .ml{position:absolute;top:0;bottom:0;border-left:1px solid var(--hair2)}
+.grid .td{position:absolute;top:0;bottom:0;width:1px;background:var(--accent)}
+
+.row{display:flex;position:relative;z-index:1;cursor:pointer;border-bottom:1px solid var(--hair)}
+.row.l1{height:var(--h1);border-top:1px solid var(--ink);border-bottom-color:var(--hair2)}
+.row.l1:first-child{border-top:0}
+.row.l2{height:var(--h2)}
+.row.l3{height:var(--h3)}
+.cl{position:sticky;left:0;z-index:3;width:var(--left);flex:0 0 var(--left);background:var(--paper);border-right:1px solid var(--hair);display:flex;align-items:center;gap:8px;padding:0 14px 0 0;overflow:hidden}
+.row:hover .cl{background:var(--tint)}
+.row:hover .ct{background:rgba(0,0,0,.015)}
+.row.l1 .cl,.row.l1 .ct{background-image:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--ink) 9%,transparent) 0 1.5px,transparent 1.5px 6px)}  /* LV1 のみ網掛け */
+.row.l1 .cl{background-color:var(--tint)}
+.ind{flex:0 0 auto}
+.l1 .ind{width:14px}.l2 .ind{width:28px}.l3 .ind{width:42px}
+@media (max-width:640px){ .l1 .ind{width:10px}.l2 .ind{width:18px}.l3 .ind{width:26px} }
+.tg{flex:0 0 14px;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:9px;transition:transform .2s;color:var(--ink)}
+.collapsed .tg{transform:rotate(-90deg)}
+.tg.none{visibility:hidden}
+.txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l1 .nm{font-size:14px;font-weight:900;letter-spacing:.02em}
+.l2 .nm{font-size:13px;font-weight:700;color:var(--ink2)}
+.l3 .nm{font-size:12.5px;font-weight:500;color:var(--ink2)}
+.mt{font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;font-feature-settings:"tnum"}
+.mt b{font-weight:600;color:var(--ink2)}
+.tbd{display:inline-block;padding:0 5px;background:var(--accent);color:var(--paper);font-weight:700;letter-spacing:.08em;line-height:1.5}
+.stat.tbdk .n{color:var(--paper);background:var(--accent);padding:2px 6px}
+.flag{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+/* 論点インジケーター（備考に記入がある行） */
+.iss{flex:0 0 auto;min-width:16px;height:16px;padding:0 3px;display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-size:10px;font-weight:800;line-height:1;letter-spacing:0;cursor:pointer;font-feature-settings:"tnum"}
+.iss.sum{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.iss:hover{opacity:.8}
+.tip{position:fixed;z-index:60;display:none;max-width:min(340px,90vw);padding:10px 12px;background:var(--paper);border:1px solid var(--ink);box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 14%,transparent);font-size:12px;line-height:1.6;color:var(--ink);pointer-events:none}
+.tip.open{display:block}
+.tip .th{font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute);margin-bottom:4px}
+.tip .ti{white-space:pre-wrap;word-break:break-word}
+.tip .ti+.ti{margin-top:6px;padding-top:6px;border-top:1px solid var(--hair)}
+.tip .tw{font-weight:700;color:var(--ink2);margin-right:6px}
+.ct{position:relative;flex:0 0 auto}
+.br{position:absolute;top:50%;transform:translateY(-50%);min-width:3px}
+.l1 .br{height:20px;background:var(--lv1)}
+.l2 .br{height:14px;background:var(--lv2)}
+.l3 .br{height:12px;background:var(--lv3)}
+.row.key .cl,.row.key:hover .cl{background:var(--keybg);box-shadow:inset 4px 0 0 var(--key)}
+.row.key .ct{background:color-mix(in srgb,var(--key) 7%,transparent)}
+.row.key .nm{font-weight:800;color:var(--ink)}
+.row.key .br{background:var(--key);box-shadow:0 0 0 2px color-mix(in srgb,var(--key) 25%,transparent)}
+.l3.key .br,.l2.key .br{height:16px}
+.row.key .bl{color:var(--ink);font-weight:800}
+.tag.key{background:var(--key);border-color:var(--key);color:var(--paper)}
+/* 議論（mark=2） */
+.row.dis .cl,.row.dis:hover .cl{background:var(--disbg);box-shadow:inset 4px 0 0 var(--dis)}
+.row.dis .ct{background:color-mix(in srgb,var(--dis) 7%,transparent)}
+.row.dis .nm{font-weight:800;color:var(--ink)}
+.row.dis .br{background:var(--dis);box-shadow:0 0 0 2px color-mix(in srgb,var(--dis) 25%,transparent)}
+.l3.dis .br,.l2.dis .br{height:16px}
+.row.dis .bl{color:var(--ink);font-weight:800}
+.tag.dis{background:var(--dis);border-color:var(--dis);color:var(--paper)}
+.br.done{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
+.br.over::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--accent)}
+.br .pg{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.28)}
+.bl{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;pointer-events:none;font-size:10.5px;color:var(--ink2);letter-spacing:.02em}
+.l1 .bl{font-weight:800;color:var(--ink)}
+.l2 .bl{font-weight:600}
+.l3 .bl{color:var(--mute)}
+.nodate{position:absolute;top:50%;transform:translateY(-50%);font-size:10px;color:var(--mute);letter-spacing:.1em}
+
+.empty,.errbox{padding:64px 20px;text-align:center;font-size:13px;color:var(--mute);letter-spacing:.06em}
+.errbox{color:var(--accent)}
+
+/* ===== Overlays ===== */
+.ov{position:fixed;inset:0;display:none;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+.ov.open{display:flex}
+.login{width:100%;max-width:380px;border-top:3px solid var(--ink);padding-top:22px}
+.login h2{margin:8px 0 22px;font-size:30px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+.login input{width:100%;height:46px;border:0;border-bottom:1px solid var(--ink);font-size:16px;outline:none;background:transparent;padding:0 2px}
+.login .msg{min-height:20px;font-size:12px;color:var(--accent);margin:10px 0}
+.pbtn{width:100%;height:50px;border:0;background:var(--ink);color:var(--paper);font-size:12px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;transition:opacity .2s}
+.pbtn:hover{opacity:.82}
+
+.dov{align-items:flex-end;padding:0;background:rgba(10,10,10,.35);backdrop-filter:none;-webkit-backdrop-filter:none}
+@media (min-width:641px){ .dov{align-items:stretch;justify-content:flex-end} }
+.dt{background:var(--paper);width:100%;max-height:86dvh;overflow:auto;padding:22px 22px calc(24px + env(safe-area-inset-bottom));border-top:3px solid var(--ink);animation:up .25s ease}
+@media (min-width:641px){ .dt{max-width:440px;max-height:none;height:100%;border-top:0;border-left:3px solid var(--ink);animation:sl .25s ease} }
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+@keyframes sl{from{transform:translateX(30px);opacity:0}}
+.dt h3{margin:8px 0 14px;font-size:24px;font-weight:900;line-height:1.2}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tag{font-size:10px;font-weight:600;letter-spacing:.14em;padding:4px 8px;border:1px solid var(--ink)}
+.tag.inv{background:var(--ink);color:var(--paper)}
+.tag.al{border-color:var(--accent);color:var(--accent)}
+.issbox{margin:0 0 20px;padding:12px 14px;border-left:3px solid var(--ink);background:var(--tint)}
+.issbox .th{font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute);margin-bottom:6px}
+.issbox .ti{font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.issbox .ti+.ti{margin-top:8px;padding-top:8px;border-top:1px solid var(--hair2)}
+.issbox .tw{font-weight:700;margin-right:6px}
+.kv{margin:0;border-top:1px solid var(--ink)}
+.kv div{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair)}
+.kv dt{font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);padding-top:3px}
+.kv dd{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.kv .auto{font-size:9px;letter-spacing:.14em;color:var(--mute);margin-left:6px}
+.dt .pbtn{margin-top:22px}
+
+.loading{position:fixed;left:0;right:0;top:0;height:2px;z-index:60;display:none;overflow:hidden}
+.loading.on{display:block}
+.loading i{position:absolute;top:0;bottom:0;width:30%;background:var(--ink);animation:ld 1s ease-in-out infinite}
+@keyframes ld{from{left:-30%}to{left:100%}}
+
+/* ===== Contract & Payment 追加スタイル ===== */
+.stat{cursor:pointer}
+.stat:hover .l{color:var(--ink)}
+.stat.sel .l{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.l1 .br{height:8px;background:var(--lv1)}
+.l2 .br{height:14px;background:var(--lv2)}
+.l2 .br.done{background-color:var(--lv3)}
+/* 当初工期（変更がある場合のみ、点線で表示） */
+.br0{position:absolute;top:50%;transform:translateY(-50%);height:20px;border:1px dashed var(--hair2);pointer-events:none}
+/* マーカー：◆支払予定 ●検収 ✓支払処理 */
+.mk{position:absolute;top:50%;z-index:2;pointer-events:none}
+.mk.pay{width:11px;height:11px;transform:translate(-50%,-50%) rotate(45deg);background:var(--paper);border:2px solid var(--ink)}
+.mk.pay.over{background:var(--accent);border-color:var(--accent)}
+.mk.pay.soon{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.mk.pay.ghost{border-color:var(--hair2);border-style:dashed;background:transparent}
+.mk.insp{width:8px;height:8px;border-radius:50%;transform:translate(-50%,-50%);background:var(--ink)}
+.mk.paid{transform:translate(-50%,-50%);font-size:12px;font-weight:900;line-height:1;color:var(--ink)}
+.bl .al{color:var(--accent);font-weight:700}
+/* アラートバッジ（色は Gantt と同じ ink / accent の2色のみ） */
+.ab{flex:0 0 auto;display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;line-height:1;padding:4px 5px;border:1px solid var(--ink);white-space:nowrap}
+.ab.a3{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.ab.a2{border-color:var(--accent);color:var(--accent)}
+.ab.a1{background:var(--ink);color:var(--paper)}
+.ab.a0{color:var(--ink)}
+.ab.inf{border-color:var(--hair2);color:var(--mute)}
+.acnt{flex:0 0 auto;min-width:18px;height:16px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--accent);color:var(--paper);font-feature-settings:"tnum"}
+.acnt.k{background:var(--ink)}
+/* 支払ステップ（検収→検収書→請求書→支払） */
+.steps{display:inline-flex;gap:3px;vertical-align:middle;margin-left:6px}
+.steps i{width:6px;height:6px;border:1px solid var(--ink2);display:inline-block}
+.steps i.on{background:var(--ink)}
+.row.hid .nm{color:var(--mute);text-decoration:line-through}
+/* ===== Alerts（リスト表示） ===== */
+.alist{padding:8px 28px 48px;max-width:1280px}
+.asec{margin-top:26px}
+.asec-h{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--ink)}
+.asec-h .cnt{font-size:22px;font-weight:800;line-height:1;font-feature-settings:"tnum"}
+.asec-h .ds{font-size:11px;color:var(--mute);letter-spacing:.04em}
+.ar{display:grid;grid-template-columns:70px minmax(0,1fr) 96px 92px 120px 64px;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.ar:hover{background:var(--tint)}
+.ar .no{font-size:12px;font-weight:800;font-feature-settings:"tnum";padding-left:4px}
+.ar .nm2{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar .sub{font-size:10px;color:var(--mute);letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.ar .dt2{font-size:12px;font-feature-settings:"tnum"}
+.ar .dt2 small{display:block;font-size:9px;letter-spacing:.16em;color:var(--mute)}
+.ar .dd{font-size:18px;font-weight:800;font-feature-settings:"tnum";white-space:nowrap}
+.ar .dd small{font-size:10px;font-weight:600;margin-left:2px;letter-spacing:.06em}
+.ar .dd.al{color:var(--accent)}
+.ar .am{font-size:12px;text-align:right;font-feature-settings:"tnum"}
+.alist .empty{padding:40px 0;text-align:left}
+.ahd{display:grid;grid-template-columns:70px minmax(0,1fr) 96px 92px 120px 64px;gap:14px;padding:16px 0 6px;font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute)}
+.ahd span:nth-child(5){text-align:right}
+@media (max-width:640px){
+  .alist{padding:4px 16px 40px}
+  .ar,.ahd{grid-template-columns:54px minmax(0,1fr) 72px;gap:10px}
+  .ar .dt2,.ar .am,.ar .stp,.ahd span:nth-child(3),.ahd span:nth-child(5),.ahd span:nth-child(6){display:none}
+}
+body.v-list .tl-only{display:none}
+/* ===== Detail 追加 ===== */
+.pipe{display:grid;grid-template-columns:repeat(4,1fr);margin:0 0 20px;border-top:1px solid var(--ink)}
+.pipe .st{padding:10px 8px 10px 0;border-right:1px solid var(--hair)}
+.pipe .st:last-child{border-right:0}
+.pipe .st b{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700}
+.pipe .st b::before{content:"";width:8px;height:8px;border:1px solid var(--ink)}
+.pipe .st.on b::before{background:var(--ink)}
+.pipe .st em{display:block;font-style:normal;font-size:11px;color:var(--mute);margin-top:4px;font-feature-settings:"tnum"}
+.pipe .st.on em{color:var(--ink)}
+.dt .lnk{display:inline-block;margin-top:16px;color:var(--ink);text-decoration:none}
+.kv .ch{font-size:9px;letter-spacing:.14em;color:var(--accent);margin-left:6px}
+@media (max-width:640px){ .cl .ab{display:none} }
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><i></i></div>
+<div class="app">
+  <header class="hd">
+    <div class="brand">
+      <h1 id="title">—</h1>
+      <div class="upd" id="updated">&nbsp;</div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <nav>
+      <button class="txtbtn" id="btnReload">Reload</button>
+      <button class="txtbtn" id="btnLogout">Logout</button>
+    </nav>
+  </header>
+
+  <div class="tb">
+    <div class="grp" id="view">
+      <button class="txtbtn" data-v="list" title="アラートを種別ごとに一覧">Alerts</button>
+      <button class="txtbtn" data-v="tl" title="契約工期と支払予定をタイムラインで表示">Timeline</button>
+    </div>
+    <span class="sep"></span>
+    <div class="grp tl-only" id="zoom">
+      <button class="txtbtn" data-z="day">Day</button>
+      <button class="txtbtn" data-z="week">Week</button>
+      <button class="txtbtn" data-z="month">Month</button>
+    </div>
+    <span class="sep tl-only"></span>
+    <div class="grp">
+      <button class="txtbtn tl-only" id="btnToday">Today</button>
+      <button class="txtbtn tl-only" id="btnL1" title="案件のみ表示">案件</button>
+      <button class="txtbtn tl-only" id="btnL2" title="すべて展開">All</button>
+      <button class="txtbtn" id="btnFilter">Filter</button>
+    </div>
+    <div class="legend tl-only">
+      <span><i style="background:var(--lv2)"></i>工期</span>
+      <span><i style="background:transparent;border:1px dashed var(--hair2);height:8px"></i>当初工期</span>
+      <span><i style="width:9px;height:9px;transform:rotate(45deg);border:2px solid var(--ink);margin-right:8px"></i>支払予定</span>
+      <span><i style="width:7px;height:7px;border-radius:50%;background:var(--ink)"></i>検収</span>
+      <span><i style="background:var(--accent);height:2px"></i>アラート</span>
+    </div>
+    <input type="search" class="search" id="q" placeholder="Search">
+    <div class="filters" id="filters">
+      <div class="fld"><span class="fl">Alert</span><div class="ms" data-k="alert"></div></div>
+      <div class="fld"><span class="fl">区分</span><div class="ms" data-k="kubun"></div></div>
+      <div class="fld"><span class="fl">契約先</span><div class="ms" data-k="vendor"></div></div>
+      <div class="fld"><span class="fl">Status</span><div class="ms" data-k="status"></div></div>
+      <label class="chk"><input type="checkbox" id="onlyAlert">アラートのみ</label>
+      <label class="chk" title="A列に1が入っている行（非表示行）も表示"><input type="checkbox" id="showHidden">非表示行も表示</label>
+      <button class="txtbtn" id="btnClear" title="フィルタを初期状態に戻す">Reset</button>
+    </div>
+  </div>
+
+  <div class="scroller" id="scroller"><div class="chart" id="chart"></div></div>
+</div>
+
+<div class="ov" id="loginOv">
+  <form class="login" id="loginForm">
+    <div class="eyebrow">Restricted Access</div>
+    <h2>Enter<br>Password.</h2>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Password" required>
+    <div class="msg" id="loginMsg"></div>
+    <button class="pbtn" type="submit">View Dashboard</button>
+  </form>
+</div>
+
+<div class="ov dov" id="detailOv"><div class="dt" id="detail"></div></div>
+
+<script>
+/* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のままでも動作 */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzkjXaP9IVSTNNWt09hCn8juJWHWbHE5vfjBDuvLlCytL-yZq40t2DsSWIeQibSx5OHPQ/exec';
+const PW_KEY = 'pay_pw', PREF_KEY = 'pay_prefs_v1';
+const DAY = 86400000;
+const ZOOMS = { day: 24, week: 8, month: 3 };
+const WDJ = ['日','月','火','水','木','金','土'];
+/* アラートのしきい値（日） */
+const DUE_SOON = 30;    // 支払予定日まで30日以内 → 支払接近
+const END_SOON = 14;    // 工期終了まで14日以内（未検収） → 工期間近
+/* フィールド名 → スプレッドシートのヘッダー名（改行・空白は無視して照合。列名が変わったらここだけ直す） */
+const FIELDS = { hide:'非表示', no:'No', project:'案件', name:'契約', vendor:'契約先', status:'Status',
+  s0:'当初開始日', e0:'当初終了日', p0:'当初支払予定日', s1:'変更後開始日', e1:'変更後終了日', p1:'変更後支払予定日',
+  insp:'検収日', doc:'検収書作成日', inv:'請求書受領日', paid:'支払処理日', amount:'金額（税抜）', note:'備考' };
+const REQUIRED = ['no', 'name', 'e0', 'p0', 'paid'];
+const DATE_KEYS = ['s0','e0','p0','s1','e1','p1','insp','doc','inv','paid'];
+/* アラート種別（rank が小さいほど優先） */
+const AL = {
+  payOver:  { lbl:'支払超過', cls:'a3', rank:0, ds:'支払予定日を過ぎても支払処理日が未入力' },
+  paySoon:  { lbl:'支払接近', cls:'a2', rank:1, ds:'支払予定日まで' + DUE_SOON + '日以内' },
+  termEnd:  { lbl:'工期終了', cls:'a1', rank:2, ds:'契約終了日を過ぎても検収日が未入力' },
+  termSoon: { lbl:'工期間近', cls:'a0', rank:3, ds:'契約終了日まで' + END_SOON + '日以内（未検収）' },
+};
+const AL_KEYS = Object.keys(AL);
+const STEPS = [['insp','検収'], ['doc','検収書'], ['inv','請求書'], ['paid','支払']];
+const MULTI = ['alert', 'kubun', 'vendor', 'status'];
+const BLANK = '', BLANK_LABEL = '(空欄)', NONE = 'なし';
+const newFilter = () => ({ alert:[], kubun:[], vendor:[], status:[], q:'', onlyAlert:false, showHidden:false });
+const $ = (id) => document.getElementById(id);
+const S = {
+  items: [], url: '', gid: '',
+  view: 'list', zoom: innerWidth <= 640 ? 'month' : 'week',
+  f: newFilter(), opts: {}, collapsed: new Set(), toToday: true, range: null,
+};
+const TODAY = (() => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY; })();
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch (_) {} },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPrefs(); bindUI();
+  const pw = store.get(PW_KEY);
+  pw ? fetchData(pw) : showLogin();
+});
+
+/* ================= API ================= */
+function callApi(password) {
+  if (window.google && google.script && google.script.run) {
+    return new Promise((ok, ng) => google.script.run.withSuccessHandler(ok).withFailureHandler(ng).getData(password));
+  }
+  if (!API_URL) return Promise.reject(new Error('API_URL が設定されていません'));
+  return fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ password }), cache:'no-store', redirect:'follow' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+}
+function fetchData(pw) {
+  setLoading(true);
+  callApi(pw).then((res) => {
+    if (!res || !res.ok) {
+      if (res && (res.error === 'AUTH' || res.error === 'LOCKED')) { store.del(PW_KEY); showLogin(res.message); return; }
+      throw new Error((res && res.message) || '不明なエラー');
+    }
+    store.set(PW_KEY, pw); hideLogin();
+    S.items = toContracts(res); S.url = res.url || ''; S.gid = res.gid;
+    $('title').textContent = res.title || 'Contract & Payment';
+    $('updated').textContent = 'Updated ' + (res.updatedAt || '') + ' — ' + (res.sheetName || '');
+    buildFilterOptions(); render();
+  }).catch((err) => showError(err && err.message ? err.message : String(err)))
+    .finally(() => setLoading(false));
+}
+
+/* ================= Data ================= */
+const nk = (s) => String(s == null ? '' : s).replace(/\s+/g, '');
+function toNum(s) {
+  const m = String(s || '').normalize('NFKC').match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / DAY : null;
+}
+const statusKey = (v) => ({ open:'open', wip:'wip', pending:'pending', close:'close', closed:'close' })[String(v || '').normalize('NFKC').trim().toLowerCase()] || (v ? 'other' : 'blank');
+function toContracts(res) {
+  const hs = (res.headers || []).map(nk);
+  const missing = REQUIRED.map((k) => FIELDS[k]).filter((h) => !hs.includes(nk(h)));
+  if (missing.length) throw new Error('ヘッダーが見つかりません: ' + missing.join(', '));
+  return (res.rows || []).map((r, i) => {
+    const m = {}; for (const k in r) m[nk(k)] = r[k];
+    const c = { id: 'c' + i, row: r._row };
+    for (const k in FIELDS) c[k] = String(m[nk(FIELDS[k])] == null ? '' : m[nk(FIELDS[k])]).trim();
+    if (!c.no && !c.name) return null;
+    c.hidden = c.hide.normalize('NFKC').trim() === '1';
+    c.sk = statusKey(c.status);
+    DATE_KEYS.forEach((k) => { c['_' + k] = toNum(c[k]); });
+    c.s = c._s1 != null ? c._s1 : c._s0;
+    c.e = c._e1 != null ? c._e1 : c._e0;
+    c.p = c._p1 != null ? c._p1 : c._p0;
+    c.changed = c._s1 != null || c._e1 != null || c._p1 != null;
+    c.amt = Number(c.amount.normalize('NFKC').replace(/[^\d.-]/g, '')) || 0;
+    const pm = c.project.match(/^(\d{3})_(\d{6})_([^_]+)_(.+)$/);
+    c.pno = pm ? pm[1] : (c.no.split('-')[0] || '');
+    c.kubun = pm ? pm[3] : '—';
+    c.ptitle = pm ? pm[4] : (c.project || c.pno);
+    c.pkey = c.project || c.pno;
+    c.paidDone = c._paid != null;
+    c.closed = c.sk === 'close' || c.paidDone;
+    c.noPay = !c.closed && c.p == null;
+    c.alerts = calcAlerts(c);
+    c.top = c.alerts[0] || null;
+    return c;
+  }).filter(Boolean);
+}
+/* アラート判定：Close または 支払処理日あり は対象外 */
+function calcAlerts(c) {
+  const a = [];
+  if (c.closed) return a;
+  if (c.p != null) {
+    const d = c.p - TODAY;
+    if (d < 0) a.push({ k:'payOver', d:-d, at:c.p });
+    else if (d <= DUE_SOON) a.push({ k:'paySoon', d, at:c.p });
+  }
+  if (c._insp == null && c.e != null) {
+    const d = c.e - TODAY;
+    if (d < 0) a.push({ k:'termEnd', d:-d, at:c.e });
+    else if (d <= END_SOON) a.push({ k:'termSoon', d, at:c.e });
+  }
+  return a.sort((x, y) => AL[x.k].rank - AL[y.k].rank);
+}
+const filtering = () => { const f = S.f; return !!(f.q || f.onlyAlert || MULTI.some((k) => f[k].length)); };
+function matched() {
+  const f = S.f, q = f.q.trim().toLowerCase();
+  return S.items.filter((c) => {
+    if (c.hidden && !f.showHidden) return false;
+    if (f.onlyAlert && !c.alerts.length) return false;
+    if (f.kubun.length && !f.kubun.includes(c.kubun)) return false;
+    if (f.vendor.length && !f.vendor.includes(c.vendor)) return false;
+    if (f.status.length && !f.status.includes(c.status || BLANK)) return false;
+    if (f.alert.length) {
+      const ls = c.alerts.length ? c.alerts.map((a) => AL[a.k].lbl) : [NONE];
+      if (!ls.some((l) => f.alert.includes(l))) return false;
+    }
+    if (q && ![c.no, c.name, c.vendor, c.project, c.note].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function groups(list) {
+  const map = new Map();
+  list.forEach((c) => {
+    if (!map.has(c.pkey)) map.set(c.pkey, { key:c.pkey, pno:c.pno, kubun:c.kubun, title:c.ptitle, items:[] });
+    map.get(c.pkey).items.push(c);
+  });
+  return [...map.values()];
+}
+
+/* ================= Format ================= */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]);
+function fmt(d, long) {
+  if (d == null) return '—';
+  const t = new Date(d * DAY), y = t.getUTCFullYear(), m = t.getUTCMonth() + 1, dd = t.getUTCDate();
+  const ymd = `${y}/${String(m).padStart(2, '0')}/${String(dd).padStart(2, '0')}`;
+  return long ? `${ymd}（${WDJ[t.getUTCDay()]}）` : ymd;
+}
+/* タイムライン用の短い日付（今年なら年を省略） */
+const fmtS = (d) => { const t = new Date(d * DAY); return (t.getUTCFullYear() !== new Date(TODAY * DAY).getUTCFullYear() ? t.getUTCFullYear() + '/' : '') + (t.getUTCMonth() + 1) + '/' + t.getUTCDate(); };
+const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
+const man = (n) => n >= 1e8 ? (n / 1e8).toFixed(2) + '億' : Math.round(n / 1e4).toLocaleString('ja-JP') + '万';
+const dayTxt = (a) => a.k === 'payOver' || a.k === 'termEnd' ? a.d + '日超過' : a.d === 0 ? '本日' : 'あと' + a.d + '日';
+const badge = (a, long) => `<span class="ab ${AL[a.k].cls}" title="${esc(AL[a.k].ds)}">${AL[a.k].lbl}${long ? ' ' + dayTxt(a) : ''}</span>`;
+const stepsHtml = (c) => `<span class="steps" title="${STEPS.map(([k, l]) => l + (c['_' + k] != null ? '済' : '未')).join(' → ')}">${STEPS.map(([k]) => `<i${c['_' + k] != null ? ' class="on"' : ''}></i>`).join('')}</span>`;
+
+/* ================= Render ================= */
+function render() {
+  const L = matched();
+  renderStats(L);
+  document.body.classList.toggle('v-list', S.view === 'list');
+  syncControls();
+  if (!S.items.length) { $('chart').style.width = '100%'; $('chart').innerHTML = '<div class="empty">NO DATA</div>'; return; }
+  if (S.view === 'list') renderList(L); else renderTimeline(L);
+}
+function renderStats(L) {
+  const cnt = (k) => L.filter((c) => c.alerts.some((a) => a.k === k)).length;
+  const unpaid = L.filter((c) => !c.closed).reduce((s, c) => s + c.amt, 0);
+  const sel = S.f.alert.length === 1 ? S.f.alert[0] : '';
+  const st = (k, label) => { const n = cnt(k); return `<div class="stat${n && (k === 'payOver' || k === 'paySoon') ? ' alert' : ''}${sel === AL[k].lbl ? ' sel' : ''}" data-al="${k}" title="${esc(AL[k].ds)}（クリックで絞り込み）"><span class="n">${n}</span><span class="l">${label}</span></div>`; };
+  $('stats').innerHTML = `
+    <div class="stat" data-al="" title="${filtering() ? 'フィルタ適用中の件数' : '全件（非表示行を除く）'}"><span class="n">${L.length}</span><span class="l">Contracts</span></div>
+    ${st('payOver', 'Pay Overdue')}${st('paySoon', 'Pay ≤' + DUE_SOON + 'd')}${st('termEnd', 'Term Ended')}
+    <div class="stat" data-al="" title="支払処理日が未入力の契約金額（税抜）合計"><span class="n">${man(unpaid)}</span><span class="l">Unpaid</span></div>`;
+}
+
+/* ---------- Alerts（リスト） ---------- */
+function renderList(L) {
+  $('chart').style.width = '100%';
+  const sec = AL_KEYS.map((k) => {
+    const its = L.flatMap((c) => c.alerts.filter((a) => a.k === k).map((a) => ({ c, a })));
+    its.sort((x, y) => (k === 'payOver' || k === 'termEnd') ? y.a.d - x.a.d : x.a.d - y.a.d);
+    return { k, its };
+  });
+  const nop = L.filter((c) => c.noPay);
+  const head = `<div class="ahd"><span>No</span><span>契約 / 契約先</span><span>期日</span><span>日数</span><span>金額（税抜）</span><span>進捗</span></div>`;
+  const row = (c, a) => `<div class="ar" data-id="${c.id}">
+      <span class="no">${esc(c.no)}</span>
+      <div style="min-width:0"><div class="nm2">${esc(c.name || '(無題)')}</div><div class="sub">${esc(c.vendor)}　${esc(c.kubun)}${c.changed ? '　<b>変更あり</b>' : ''}</div></div>
+      <span class="dt2"><small>${a ? (a.k.startsWith('pay') ? '支払予定' : '契約終了') : '終了'}</small>${fmt(a ? a.at : c.e)}</span>
+      <span class="dd${a && (a.k === 'payOver' || a.k === 'paySoon') ? ' al' : ''}">${a ? (a.k === 'payOver' || a.k === 'termEnd' ? a.d + '<small>日超過</small>' : a.d === 0 ? '本日' : a.d + '<small>日後</small>') : '—'}</span>
+      <span class="am">${c.amt ? yen(c.amt) : '—'}</span>
+      <span class="stp">${stepsHtml(c)}</span></div>`;
+  let html = '<div class="alist">';
+  const total = sec.reduce((s, x) => s + x.its.length, 0);
+  if (!total) html += '<div class="asec"><div class="empty">アラートはありません</div></div>';
+  sec.forEach(({ k, its }) => {
+    if (!its.length) return;
+    html += `<section class="asec"><div class="asec-h"><span class="ab ${AL[k].cls}">${AL[k].lbl}</span><span class="cnt">${its.length}</span><span class="ds">${esc(AL[k].ds)}</span></div>${head}${its.map(({ c, a }) => row(c, a)).join('')}</section>`;
+  });
+  if (nop.length) html += `<section class="asec"><div class="asec-h"><span class="ab inf">支払予定日 未設定</span><span class="cnt">${nop.length}</span><span class="ds">支払予定日（当初・変更後とも）が空欄のため判定できません</span></div>${head}${nop.map((c) => row(c, null)).join('')}</section>`;
+  $('chart').innerHTML = html + '</div>';
+}
+
+/* ---------- Timeline ---------- */
+const leftW = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left')) || 340;
+function calcRange() {
+  const ds = [TODAY];
+  S.items.forEach((c) => DATE_KEYS.forEach((k) => { if (c['_' + k] != null) ds.push(c['_' + k]); }));
+  const toD = (y, m) => Date.UTC(y, m, 1) / DAY;
+  const a = new Date(Math.min(...ds) * DAY), b = new Date(Math.max(...ds) * DAY);
+  return { start: toD(a.getUTCFullYear(), a.getUTCMonth()), end: toD(b.getUTCFullYear(), b.getUTCMonth() + 2) - 1 };
+}
+function renderTimeline(L) {
+  const R = S.range = calcRange(), px = ZOOMS[S.zoom], W = Math.round((R.end - R.start + 1) * px);
+  const X = (d) => Math.round((d - R.start) * px);
+  let months = '', ticks = '', grid = '';
+  for (let d = R.start; d <= R.end;) {
+    const t = new Date(d * DAY), nx = Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1) / DAY;
+    const lbl = S.zoom === 'month' ? `${t.getUTCFullYear() % 100}.${String(t.getUTCMonth() + 1).padStart(2, '0')}` : `${t.getUTCFullYear()}.${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
+    months += `<div class="month" style="left:${X(d)}px;width:${X(nx) - X(d)}px">${lbl}</div>`;
+    grid += `<div class="ml" style="left:${X(d)}px"></div>`;
+    d = nx;
+  }
+  for (let d = R.start; d <= R.end; d++) {
+    const wd = new Date(d * DAY).getUTCDay(), we = wd === 0 || wd === 6;
+    if (S.zoom === 'day') {
+      ticks += `<div class="tick${we ? ' we' : ''}${d === TODAY ? ' today' : ''}" style="left:${X(d)}px;width:${px}px">${new Date(d * DAY).getUTCDate()}<br>${WDJ[wd]}</div>`;
+      if (we) grid += `<div class="we" style="left:${X(d)}px;width:${px}px"></div>`;
+    } else if (S.zoom === 'week' && wd === 1) {
+      const t = new Date(d * DAY);
+      ticks += `<div class="tick" style="left:${X(d)}px;width:${px * 7}px">${t.getUTCMonth() + 1}/${t.getUTCDate()}</div>`;
+      grid += `<div class="wl" style="left:${X(d)}px"></div>`;
+    }
+  }
+  grid += `<div class="td" style="left:${X(TODAY) + (S.zoom === 'day' ? Math.round(px / 2) : 0)}px"></div>`;
+  const G = groups(L);
+  let rows = '';
+  G.forEach((g) => {
+    const col = S.collapsed.has(g.key);
+    rows += groupRow(g, col, X, W);
+    if (!col) g.items.forEach((c) => { rows += contractRow(c, X, W); });
+  });
+  if (!G.length) rows = '<div class="empty">該当する契約がありません</div>';
+  const lw = leftW();
+  $('chart').style.width = (lw + W) + 'px';
+  $('chart').innerHTML = `<div class="head"><div class="corner">CONTRACT</div><div class="scale" style="width:${W}px"><div class="months">${months}</div><div class="ticks${S.zoom === 'month' ? ' hide' : ''}">${ticks}</div></div></div>
+    <div class="body"><div class="grid" style="left:${lw}px;width:${W}px">${grid}</div>${rows}</div>`;
+  if (S.toToday) { S.toToday = false; requestAnimationFrame(goToday); }
+}
+function groupRow(g, col, X, W) {
+  const ss = g.items.map((c) => c.s).filter((v) => v != null);
+  const es = g.items.flatMap((c) => [c.e, c.p, c._paid]).filter((v) => v != null);
+  const amt = g.items.reduce((s, c) => s + c.amt, 0);
+  const nA = g.items.filter((c) => c.alerts.length).length, red = g.items.some((c) => c.top && c.top.k.startsWith('pay'));
+  let bar = '';
+  if (ss.length || es.length) {
+    const s = Math.min(...(ss.length ? ss : es)), e = Math.max(...(es.length ? es : ss));
+    bar = `<div class="br" style="left:${X(s)}px;width:${Math.max(3, X(e + 1) - X(s))}px"></div><span class="bl" style="left:${X(e + 1) + 8}px">${esc(g.pno)}　${esc(g.title)}</span>`;
+  }
+  return `<div class="row l1${col ? ' collapsed' : ''}" data-g="${esc(g.key)}">
+    <div class="cl"><span class="ind"></span><span class="tg" data-tg="1">▼</span>
+      <div class="txt"><div class="nm">${esc(g.title)}</div><div class="mt"><b>${esc(g.pno)}</b> · ${esc(g.kubun)} · ${g.items.length}件 · ${yen(amt)}</div></div>
+      ${nA ? `<span class="acnt${red ? '' : ' k'}" title="アラートのある契約 ${nA}件">!${nA}</span>` : ''}
+    </div>
+    <div class="ct" style="width:${W}px">${bar}</div></div>`;
+}
+function contractRow(c, X, W) {
+  let ct = '';
+  const pts = [];
+  if (c.changed && c._s0 != null && c._e0 != null && (c._s0 !== c.s || c._e0 !== c.e)) ct += `<div class="br0" style="left:${X(c._s0) - 3}px;width:${X(c._e0 + 1) - X(c._s0) + 6}px"></div>`;
+  if (c.s != null || c.e != null) {
+    const s = c.s != null ? c.s : c.e, e = c.e != null ? c.e : c.s;
+    const over = c.alerts.some((a) => a.k === 'termEnd');
+    ct += `<div class="br${c.paidDone ? ' done' : ''}${over ? ' over' : ''}" style="left:${X(s)}px;width:${Math.max(3, X(e + 1) - X(s))}px"></div>`;
+    pts.push(X(e + 1));
+  }
+  if (c._p1 != null && c._p0 != null && c._p0 !== c._p1) ct += `<span class="mk pay ghost" style="left:${X(c._p0)}px" title="当初支払予定"></span>`;
+  if (c._insp != null) { ct += `<span class="mk insp" style="left:${X(c._insp)}px"></span>`; pts.push(X(c._insp)); }
+  if (c.p != null) {
+    const pa = c.alerts.find((a) => a.k.startsWith('pay'));
+    ct += `<span class="mk pay${c.paidDone ? '' : pa ? (pa.k === 'payOver' ? ' over' : ' soon') : ''}" style="left:${X(c.p)}px"></span>`;
+    pts.push(X(c.p));
+  }
+  if (c._paid != null) { ct += `<span class="mk paid" style="left:${X(c._paid)}px">✓</span>`; pts.push(X(c._paid)); }
+  if (pts.length) {
+    const lbl = [c.p != null ? '支払 ' + fmtS(c.p) : '', ...c.alerts.map((a) => `<span class="al">${AL[a.k].lbl} ${dayTxt(a)}</span>`), c.paidDone ? '支払済' : ''].filter(Boolean).join('　');
+    ct += `<span class="bl" style="left:${Math.max(...pts) + 12}px">${lbl}</span>`;
+  } else ct += `<span class="nodate" style="left:${X(TODAY) + 10}px">NO DATE</span>`;
+  return `<div class="row l2${c.hidden ? ' hid' : ''}" data-id="${c.id}">
+    <div class="cl"><span class="ind"></span><span class="tg none">▼</span>
+      <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b> · ${esc(c.vendor)}${stepsHtml(c)}</div></div>
+      ${c.top ? badge(c.top) : ''}
+    </div>
+    <div class="ct" style="width:${W}px">${ct}</div></div>`;
+}
+function goToday() {
+  if (!S.range || S.view !== 'tl') return;
+  const sc = $('scroller'), x = (TODAY - S.range.start) * ZOOMS[S.zoom];
+  sc.scrollLeft = Math.max(0, x - (sc.clientWidth - leftW()) * 0.35);
+}
+
+/* ================= Detail ================= */
+function openDetail(id) {
+  const c = S.items.find((x) => x.id === id); if (!c) return;
+  const per = (s, e) => s == null && e == null ? '—' : `${fmt(s, true)} 〜 ${fmt(e, true)}`;
+  const rem = c.e != null && !c.closed ? (c.e >= TODAY ? '　残り' + (c.e - TODAY) + '日' : '　終了から' + (TODAY - c.e) + '日') : '';
+  const kv = [
+    ['No', esc(c.no)], ['案件', esc(c.project || '—')], ['契約先', esc(c.vendor || '—')],
+    ['金額（税抜）', c.amt ? yen(c.amt) : esc(c.amount || '—')],
+    ['Status', esc(c.status || BLANK_LABEL)],
+    ['当初工期', per(c._s0, c._e0)], ['当初支払予定', fmt(c._p0, true)],
+  ];
+  if (c.changed) kv.push(['変更後工期', per(c._s1, c._e1) + '<span class="ch">CHANGED</span>'], ['変更後支払予定', fmt(c._p1, true)]);
+  kv.push(['工期（判定用）', per(c.s, c.e) + rem]);
+  const pipe = `<div class="pipe">${STEPS.map(([k, l]) => `<div class="st${c['_' + k] != null ? ' on' : ''}"><b>${l}</b><em>${c['_' + k] != null ? fmt(c['_' + k]) : (c[k] || '未')}</em></div>`).join('')}</div>`;
+  const note = c.note ? `<div class="issbox"><div class="th">備考</div><div class="ti">${esc(c.note)}</div></div>` : '';
+  const link = S.url ? `<a class="txtbtn lnk" href="${esc(S.url)}#gid=${esc(S.gid)}&range=A${c.row}" target="_blank" rel="noopener">Open Sheet — Row ${c.row} ↗</a>` : '';
+  $('detail').innerHTML = `
+    <div class="eyebrow">Contract — ${esc(c.no)}</div>
+    <h3>${esc(c.name || '(無題)')}</h3>
+    <div class="tags"><span class="tag inv">${esc(c.status || 'Status 未設定')}</span><span class="tag">${esc(c.kubun)}</span>${c.alerts.map((a) => `<span class="tag al">${AL[a.k].lbl} ${dayTxt(a)}</span>`).join('')}${c.paidDone ? '<span class="tag">支払済</span>' : ''}${c.noPay ? '<span class="tag">支払予定日 未設定</span>' : ''}${c.hidden ? '<span class="tag">非表示行</span>' : ''}</div>
+    ${pipe}${note}<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    ${link}<button class="pbtn" id="btnClose">Close</button>`;
+  $('detailOv').classList.add('open');
+  $('btnClose').onclick = closeDetail;
+}
+const closeDetail = () => $('detailOv').classList.remove('open');
+
+/* ================= UI ================= */
+function buildFilterOptions() {
+  const base = S.items.filter((c) => !c.hidden || S.f.showHidden);
+  S.opts.alert = [...AL_KEYS.map((k) => AL[k].lbl), NONE];
+  S.opts.kubun = [...new Set(base.map((c) => c.kubun))].sort((a, b) => a.localeCompare(b, 'ja'));
+  S.opts.vendor = [...new Set(base.map((c) => c.vendor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+  const order = { open:0, wip:1, pending:2, other:3, close:4, blank:5 };
+  S.opts.status = [...new Set(base.map((c) => c.status || BLANK))].sort((a, b) => order[statusKey(a)] - order[statusKey(b)] || a.localeCompare(b, 'ja'));
+  MULTI.forEach((k) => { S.f[k] = S.f[k].filter((v) => S.opts[k].includes(v)); renderMs(k); });
+}
+const msLabel = (k, v) => (k === 'status' && v === BLANK ? BLANK_LABEL : v);
+function renderMs(k) {
+  const el = document.querySelector(`.ms[data-k="${k}"]`), vals = S.opts[k] || [], sel = S.f[k];
+  const all = !sel.length;
+  const txt = all ? 'All' : sel.length === 1 ? msLabel(k, sel[0]) : `${msLabel(k, sel[0])} ほか${sel.length - 1}件`;
+  const open = el.classList.contains('open');
+  el.classList.toggle('on', !all);
+  el.innerHTML = `<button type="button" class="ms-btn" title="${esc(all ? 'All' : sel.map((v) => msLabel(k, v)).join(', '))}">${esc(txt)}</button>
+    <div class="ms-pop"><div class="ms-act"><button type="button" data-act="all">すべて</button></div>
+    ${vals.map((v, i) => `<label class="ms-opt"><input type="checkbox" data-i="${i}"${all || sel.includes(v) ? ' checked' : ''}><span class="${v === BLANK ? 'bl0' : ''}">${esc(msLabel(k, v))}</span></label>`).join('')}</div>`;
+  el.classList.toggle('open', open);
+}
+function toggleMs(k, v) {
+  const vals = S.opts[k] || [], cur = S.f[k].length ? S.f[k] : vals.slice();
+  let next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+  next = vals.filter((x) => next.includes(x));
+  S.f[k] = next.length === vals.length || !next.length ? [] : next;
+}
+function bindMs() {
+  document.querySelectorAll('.ms').forEach((el) => {
+    const k = el.dataset.k;
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.ms-btn')) {
+        const was = el.classList.contains('open');
+        document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open'));
+        el.classList.toggle('open', !was); return;
+      }
+      if (e.target.closest('[data-act]')) { S.f[k] = []; renderMs(k); render(); }
+    });
+    el.addEventListener('change', (e) => {
+      const i = e.target.dataset.i; if (i == null) return;
+      toggleMs(k, (S.opts[k] || [])[+i]); renderMs(k); render();
+    });
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.ms')) document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); });
+}
+function setDepth(d) {
+  S.collapsed.clear();
+  if (d === 1) groups(S.items).forEach((g) => S.collapsed.add(g.key));
+  savePrefs(); render();
+}
+function bindUI() {
+  $('view').addEventListener('click', (e) => { const v = e.target.dataset.v; if (!v) return; S.view = v; S.toToday = v === 'tl'; savePrefs(); render(); });
+  $('zoom').addEventListener('click', (e) => { const z = e.target.dataset.z; if (!z) return; S.zoom = z; S.toToday = true; savePrefs(); render(); });
+  $('btnToday').onclick = goToday;
+  $('btnL1').onclick = () => setDepth(1);
+  $('btnL2').onclick = () => setDepth(9);
+  $('btnFilter').onclick = () => { $('filters').classList.toggle('open'); $('btnFilter').classList.toggle('on'); };
+  bindMs();
+  $('onlyAlert').onchange = (e) => { S.f.onlyAlert = e.target.checked; render(); };
+  $('showHidden').onchange = (e) => { S.f.showHidden = e.target.checked; buildFilterOptions(); render(); };
+  let tm; $('q').addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { S.f.q = e.target.value; render(); }, 200); });
+  $('btnClear').onclick = () => { S.f = newFilter(); $('q').value = ''; buildFilterOptions(); render(); };
+  $('stats').addEventListener('click', (e) => {
+    const st = e.target.closest('.stat'); if (!st || !S.items.length) return;
+    const k = st.dataset.al;
+    S.f.alert = k && !(S.f.alert.length === 1 && S.f.alert[0] === AL[k].lbl) ? [AL[k].lbl] : [];
+    if (k) S.view = 'list';
+    renderMs('alert'); savePrefs(); render();
+  });
+  $('chart').addEventListener('click', (e) => {
+    const g = e.target.closest('.row.l1');
+    if (g) {
+      if (e.target.closest('.cl')) { S.collapsed.has(g.dataset.g) ? S.collapsed.delete(g.dataset.g) : S.collapsed.add(g.dataset.g); savePrefs(); render(); }
+      return;
+    }
+    const r = e.target.closest('[data-id]'); if (r) openDetail(r.dataset.id);
+  });
+  $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDetail(); document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); } });
+  $('btnReload').onclick = () => { const pw = store.get(PW_KEY); pw ? fetchData(pw) : showLogin(); };
+  $('btnLogout').onclick = () => {
+    if (!confirm('保存されたパスワードを削除してログアウトしますか？')) return;
+    store.del(PW_KEY); S.items = [];
+    $('chart').innerHTML = ''; $('stats').innerHTML = ''; showLogin();
+  };
+  $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); const pw = $('pw').value; if (pw) { $('loginMsg').textContent = ''; fetchData(pw); } });
+  let lastL = leftW(), rt;
+  addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const l = leftW(); if (l !== lastL && S.items.length) { lastL = l; render(); } }, 150); });
+}
+function syncControls() {
+  document.querySelectorAll('#view button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.view));
+  document.querySelectorAll('#zoom button').forEach((b) => b.classList.toggle('on', b.dataset.z === S.zoom));
+  $('onlyAlert').checked = S.f.onlyAlert; $('showHidden').checked = S.f.showHidden;
+}
+function loadPrefs() {
+  try {
+    const p = JSON.parse(store.get(PREF_KEY) || '{}');
+    if (p.zoom in ZOOMS) S.zoom = p.zoom;
+    if (p.view === 'list' || p.view === 'tl') S.view = p.view;
+    if (Array.isArray(p.collapsed)) S.collapsed = new Set(p.collapsed);
+  } catch (_) {}
+}
+function savePrefs() { store.set(PREF_KEY, JSON.stringify({ zoom: S.zoom, view: S.view, collapsed: [...S.collapsed] })); }
+function showLogin(msg) { $('loginMsg').textContent = msg || ''; $('pw').value = ''; $('loginOv').classList.add('open'); setTimeout(() => $('pw').focus(), 50); }
+const hideLogin = () => $('loginOv').classList.remove('open');
+const setLoading = (on) => $('loading').classList.toggle('on', on);
+function showError(msg) {
+  $('chart').style.width = '100%';
+  $('chart').innerHTML = `<div class="errbox">ERROR — ${esc(msg)}<br><br><button class="txtbtn" id="btnRetry">Retry</button></div>`;
+  $('btnRetry').onclick = () => $('btnReload').click();
+}
+</script>
+</body>
+</html>
