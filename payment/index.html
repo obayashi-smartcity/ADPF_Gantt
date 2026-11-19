@@ -356,6 +356,16 @@ body.v-list .tl-only{display:none}
 .lg-prog .alm{margin-right:5px;width:13px;height:13px;font-size:9px;vertical-align:-2px}
 .tip .al{color:var(--accent);font-weight:700}
 .corner .ach{letter-spacing:.06em;font-size:8.5px}
+/* 警告アイコン：戦闘機の警告灯（MASTER CAUTION）風 */
+.alm{width:22px;height:20px;background:transparent;color:inherit;font-size:0}
+.alm svg{display:block;overflow:visible;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--accent) 70%,transparent));animation:hud 1.2s steps(1,end) infinite}
+.alm .o{fill:none;stroke:var(--accent);stroke-width:1.4;stroke-linejoin:miter}
+.alm .f{fill:var(--accent)}
+.alm .x{fill:var(--paper)}
+.alm:hover svg{animation:none;filter:drop-shadow(0 0 4px var(--accent))}
+@keyframes hud{0%{opacity:1}70%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){ .alm svg{animation:none} }
+.lg-prog .alm{width:16px;height:14px;background:transparent;margin-right:5px;vertical-align:-3px;display:inline-block}
 </style>
 </head>
 <body>
@@ -405,7 +415,7 @@ body.v-list .tl-only{display:none}
       <span><b class="sq na"></b>NA（対象外）</span>
       <span><b class="sq"></b>未</span>
       <span><b class="cmi"></b>コメントあり</span>
-      <span><b class="alm">!</b>アラート（マウスで内容）</span>
+      <span><b class="alm"><svg viewBox="0 0 26 23" width="16" height="14" aria-hidden="true"><path class="o" d="M13 .8 25.2 22.2H.8Z"/><path class="f" d="M13 4.4 22.1 20.3H3.9Z"/><rect class="x" x="11.7" y="9" width="2.6" height="6.4"/><rect class="x" x="11.7" y="16.6" width="2.6" height="2.4"/></svg></b>警告（マウスで内容）</span>
     </div>
     <input type="search" class="search" id="q" placeholder="Search">
     <div class="filters" id="filters">
@@ -609,6 +619,8 @@ const badge = (a, long) => `<span class="ab ${AL[a.k].cls}" title="${esc(AL[a.k]
 const stepTxt = (c, k) => c['_' + k] != null ? fmt(c['_' + k]) + ' 済' : c.na[k] ? 'NA（対象外）' : '未';
 const progHtml = (c) => `<div class="pc">${STEPS.map(([k, l]) => `<span class="ps${c.ok[k] ? (c.na[k] ? ' na' : ' on') : ''}" title="${l}：${stepTxt(c, k)}"><i></i></span>`).join('')}</div>`;
 const progHead = () => `<div class="pc ph">${STEPS.map(([, l]) => `<span>${l}</span>`).join('')}</div>`;
+/* 警告アイコン：三角に「!」（戦闘機の警告灯風に点滅） */
+const AL_SVG = '<svg viewBox="0 0 26 23" width="20" height="18" aria-hidden="true"><path class="o" d="M13 .8 25.2 22.2H.8Z"/><path class="f" d="M13 4.4 22.1 20.3H3.9Z"/><rect class="x" x="11.7" y="9" width="2.6" height="6.4"/><rect class="x" x="11.7" y="16.6" width="2.6" height="2.4"/></svg>';
 const CM_SVG = '<svg viewBox="0 0 16 14" width="15" height="13" aria-hidden="true"><path d="M1.5 1.5h13v8h-7l-3.5 3v-3h-2.5z" fill="currentColor"/></svg>';
 const cmHtml = (c) => c.comment ? `<span class="cm" data-cm="${c.id}" aria-label="コメントあり">${CM_SVG}</span>` : '';
 
@@ -722,7 +734,7 @@ function groupRow(g, col, X, W) {
     <div class="cl"><span class="ind"></span><span class="tg" data-tg="1">▼</span>
       <div class="txt"><div class="nm">${esc(g.title)}</div><div class="mt"><b>${esc(g.pno)}</b> · ${esc(g.kubun)} · ${g.items.length}件 · ${yen(amt)}</div></div>
       <div class="pc"></div>
-      <div class="ac">${nC ? `<span class="cm sum" data-gcm="${esc(g.key)}" aria-label="コメント${nC}件">${CM_SVG}${nC}</span>` : ''}${nA ? `<span class="alm" data-gal="${esc(g.key)}" aria-label="アラート">!</span>` : ''}</div>
+      <div class="ac">${nC ? `<span class="cm sum" data-gcm="${esc(g.key)}" aria-label="コメント${nC}件">${CM_SVG}${nC}</span>` : ''}${nA ? `<span class="alm" data-gal="${esc(g.key)}" aria-label="アラート">${AL_SVG}</span>` : ''}</div>
     </div>
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
@@ -763,7 +775,7 @@ function contractRow(c, X, W) {
     <div class="cl"><span class="ind"></span><span class="tg none">▼</span>
       <div class="txt"><div class="nm">${esc(c.name || '(無題)')}</div><div class="mt"><b>${esc(c.no)}</b>${c.changed ? ' <span class="chgk">変更</span>' : ''} · ${esc(c.vendor)}</div></div>
       ${progHtml(c)}
-      <div class="ac">${cmHtml(c)}${c.alerts.length ? `<span class="alm" data-al="${c.id}" aria-label="アラート">!</span>` : ''}</div>
+      <div class="ac">${cmHtml(c)}${c.alerts.length ? `<span class="alm" data-al="${c.id}" aria-label="アラート">${AL_SVG}</span>` : ''}</div>
     </div>
     <div class="ct" style="width:${W}px">${ct}</div></div>`;
 }
